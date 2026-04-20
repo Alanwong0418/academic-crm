@@ -1472,7 +1472,6 @@ async function deleteCustomerUI(id) {
     toast('✅ 已删除，已同步云端');
   } finally { hideLoading(); }
 }
-}
 
 // ═══════════════════════════════════════════════════
 //  添加 / 编辑弹窗
@@ -1564,8 +1563,6 @@ async function saveCustomer() {
     closeFormModal();
     render();
   } finally { done(); }
-}
-  render();
 }
 
 // ═══════════════════════════════════════════════════
