@@ -286,9 +286,9 @@
     }
     .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; }
     .badge-potential { background: #fef9c3; color: #854d0e; } .badge-potential::before { background: #eab308; }
-    .badge-contacted { background: #dbeafe; color: #1d4ed8; } .badge-contacted::before { background: #3b82f6; }
-    .badge-signed { background: #dcfce7; color: #15803d; } .badge-signed::before { background: #22c55e; }
-    .badge-completed { background: #f3e8ff; color: #7e22ce; } .badge-completed::before { background: #a855f7; }
+    .badge-submitted { background: #dbeafe; color: #1d4ed8; } .badge-submitted::before { background: #3b82f6; }
+    .badge-paid { background: #dcfce7; color: #15803d; } .badge-paid::before { background: #22c55e; }
+    .badge-finished { background: #f3e8ff; color: #7e22ce; } .badge-finished::before { background: #a855f7; }
 
     /* ── 空状态 ── */
     .empty {
@@ -531,9 +531,9 @@
       background-repeat: no-repeat; background-position: right 8px center;
     }
     .status-select.potential { background-color: #fef9c3; color: #854d0e; border-color: #fde047; }
-    .status-select.contacted { background-color: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
-    .status-select.signed { background-color: #dcfce7; color: #15803d; border-color: #86efac; }
-    .status-select.completed { background-color: #f3e8ff; color: #7e22ce; border-color: #d8b4fe; }
+    .status-select.submitted { background-color: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
+    .status-select.paid { background-color: #dcfce7; color: #15803d; border-color: #86efac; }
+    .status-select.finished { background-color: #f3e8ff; color: #7e22ce; border-color: #d8b4fe; }
 
     /* ── 响应式 ── */
     @media (max-width: 1100px) {
@@ -640,7 +640,7 @@
         <option value="updateTime_desc">最近更新</option>
         <option value="createTime_desc">最新添加</option>
         <option value="name_asc">姓名 A→Z</option>
-        <option value="signed_first">已签约优先</option>
+        <option value="signed_first">已缴费优先</option>
       </select>
     </div>
 
@@ -669,11 +669,11 @@
             <div class="stat-label">期刊</div>
           </div>
         </div>
-        <div class="stat-card" id="sc-signed" onclick="switchType('signed')">
-          <div class="stat-icon green">✅</div>
+        <div class="stat-card" id="sc-paid" onclick="switchType('paid')">
+          <div class="stat-icon green">💰</div>
           <div>
-            <div class="stat-num" id="st-signed">0</div>
-            <div class="stat-label">已签约</div>
+            <div class="stat-num" id="st-paid">0</div>
+            <div class="stat-label">已缴费</div>
           </div>
         </div>
       </div>
@@ -786,9 +786,10 @@
         <div class="form-group">
           <label class="form-label">客户状态</label>
           <select class="form-select" id="f-status">
-            <option value="contacted">已联系</option>
-            <option value="signed">已签约</option>
-            <option value="completed">已完成</option>
+            <option value="potential">潜在客户</option>
+            <option value="submitted">已投稿</option>
+            <option value="paid">已缴费</option>
+            <option value="finished">已结项</option>
           </select>
         </div>
         <div class="form-group span2">
@@ -1050,7 +1051,7 @@ async function updateCustomer(id, data) {
     research: data.research || '',
     order_no: data.orderNo || '',
     conference: data.conference || '',
-    status: data.status || 'contacted',
+    status: data.status || 'submitted',
     type: data.type || '',
     remarks: data.remarks || '',
     update_time: now()
@@ -1103,9 +1104,9 @@ function now() { const d=new Date(); return `${d.getFullYear()}-${p2(d.getMonth(
 function nowFull() { const d=new Date(); return `${now()} ${p2(d.getHours())}:${p2(d.getMinutes())}`; }
 function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
 
-const STATUS = { potential:'潜在客户', contacted:'已联系', signed:'已签约', completed:'已完成' };
-const BADGE_CLASS = { potential:'badge-potential', contacted:'badge-contacted', signed:'badge-signed', completed:'badge-completed' };
-const STATUS_SEL_CLASS = { potential:'potential', contacted:'contacted', signed:'signed', completed:'completed' };
+const STATUS = { potential:'潜在客户', submitted:'已投稿', paid:'已缴费', finished:'已结项' };
+const BADGE_CLASS = { potential:'badge-potential', submitted:'badge-submitted', paid:'badge-paid', finished:'badge-finished' };
+const STATUS_SEL_CLASS = { potential:'potential', submitted:'submitted', paid:'paid', finished:'finished' };
 
 // ═══════════════════════════════════════════════════
 //  全局状态
@@ -1198,15 +1199,16 @@ async function render() {
   document.getElementById('nav-journal').className = 'nav-item' + (g.type==='journal' ? ' active' : '');
 
   // 页面标题
-  const titleMap = { all:'全部客户', conference:'会议客户', journal:'期刊客户', signed:'已签约' };
+  const titleMap = { all:'全部客户', conference:'会议客户', journal:'期刊客户', paid:'已缴费' };
   document.getElementById('page-title').textContent = titleMap[g.type] || '全部客户';
 
   // 筛选标签
   const chips = [
     {v:'all',l:'全部'},
-    {v:'contacted',l:'已联系'},
-    {v:'signed',l:'已签约'},
-    {v:'completed',l:'已完成'}
+    {v:'potential',l:'潜在客户'},
+    {v:'submitted',l:'已投稿'},
+    {v:'paid',l:'已缴费'},
+    {v:'finished',l:'已结项'}
   ];
   document.getElementById('filter-chips').innerHTML = chips.map(c =>
     `<span class="filter-chip ${g.status===c.v?'active':''}" onclick="setStatus('${c.v}')">${c.l}</span>`
@@ -1214,8 +1216,8 @@ async function render() {
 
   // 过滤数据
   let data;
-  if (g.type === 'signed') {
-    data = allCustomers.filter(c=>c.status==='signed');
+  if (g.type === 'paid') {
+    data = allCustomers.filter(c=>c.status==='paid');
   } else {
     data = g.type==='all' ? [...allCustomers] : allCustomers.filter(c=>c.type===g.type);
     if (g.status !== 'all') data = data.filter(c=>c.status===g.status);
@@ -1235,18 +1237,18 @@ async function render() {
   const sort = document.getElementById('sort-select').value;
   if (sort==='name_asc') data.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
   else if (sort==='createTime_desc') data.sort((a,b)=>(b.create_time||'').localeCompare(a.create_time||''));
-  else if (sort==='signed_first') data.sort((a,b)=>(a.status==='signed'?-1:b.status==='signed'?1:0));
+  else if (sort==='signed_first') data.sort((a,b)=>(a.status==='paid'?-1:b.status==='paid'?1:0));
   else data.sort((a,b)=>(b.update_time||'').localeCompare(a.update_time||''));
 
   // 统计卡片
   document.getElementById('st-total').textContent = allCustomers.length;
   document.getElementById('st-conference').textContent = allCustomers.filter(c=>c.type==='conference').length;
   document.getElementById('st-journal').textContent = allCustomers.filter(c=>c.type==='journal').length;
-  document.getElementById('st-signed').textContent = allCustomers.filter(c=>c.status==='signed').length;
+  document.getElementById('st-signed').textContent = allCustomers.filter(c=>c.status==='paid').length;
 
   // 统计卡片高亮
-  ['sc-all','sc-conference','sc-journal','sc-signed'].forEach(id => document.getElementById(id).classList.remove('active'));
-  const cardMap = { all:'sc-all', conference:'sc-conference', journal:'sc-journal', signed:'sc-signed' };
+  ['sc-all','sc-conference','sc-journal','sc-paid'].forEach(id => document.getElementById(id).classList.remove('active'));
+  const cardMap = { all:'sc-all', conference:'sc-conference', journal:'sc-journal', paid:'sc-paid' };
   if (cardMap[g.type]) document.getElementById(cardMap[g.type]).classList.add('active');
 
   // 分页
@@ -1413,9 +1415,10 @@ async function renderDrawer(id) {
         <div class="hero-name">${esc(c.name)}</div>
         <div class="hero-meta">
           <select class="status-select ${STATUS_SEL_CLASS[c.status]||''}" onchange="onStatusChange('${c.id}',this.value)">
-            <option value="contacted" ${c.status==='contacted'?'selected':''}>已联系</option>
-            <option value="signed" ${c.status==='signed'?'selected':''}>已签约</option>
-            <option value="completed" ${c.status==='completed'?'selected':''}>已完成</option>
+            <option value="potential" ${c.status==='potential'?'selected':''}>潜在客户</option>
+            <option value="submitted" ${c.status==='submitted'?'selected':''}>已投稿</option>
+            <option value="paid" ${c.status==='paid'?'selected':''}>已缴费</option>
+            <option value="finished" ${c.status==='finished'?'selected':''}>已结项</option>
           </select>
           ${c.create_time ? `<span style="font-size:12px;color:var(--text-muted);">创建于 ${c.create_time}</span>` : ''}
         </div>
@@ -1482,7 +1485,7 @@ function openAddModal() {
   document.getElementById('form-modal-title').textContent = `添加${typeLabel}客户`;
   const fields = ['f-name','f-phone','f-email','f-company','f-title','f-research','f-orderno','f-conference','f-remarks'];
   fields.forEach(id => { document.getElementById(id).value=''; });
-  document.getElementById('f-status').value = 'contacted';
+  document.getElementById('f-status').value = 'submitted';
   document.getElementById('f-orderno').value = '';
   // 类型选择器：全部客户模式下显示并默认选会议，其他模式下隐藏
   const typeSelect = document.getElementById('f-type');
@@ -1556,7 +1559,7 @@ async function saveCustomer() {
       toast(ok ? '✅ 修改成功，已同步云端' : '❌ 修改失败，请重试');
       if (ok && currentDetailId===g.editingId) await renderDrawer(g.editingId);
     } else {
-      data.type = (g.type === 'all' || g.type === 'signed') ? document.getElementById('f-type').value : g.type;
+      data.type = (g.type === 'all' || g.type === 'paid') ? document.getElementById('f-type').value : g.type;
       const c = await createCustomer(data);
       toast(c ? '✅ 添加成功，已同步云端' : '❌ 添加失败，请重试');
     }
@@ -1570,7 +1573,7 @@ async function saveCustomer() {
 // ═══════════════════════════════════════════════════
 async function doExportCSV() {
   if (!allCustomers.length) { toast('暂无数据可导出'); return; }
-  const ST = { potential:'潜在客户', contacted:'已联系', signed:'已签约', completed:'已完成' };
+  const ST = { potential:'潜在客户', submitted:'已投稿', paid:'已缴费', finished:'已结项' };
   const TY = { conference:'会议客户', journal:'期刊客户' };
 
   function csvCell(v) {
