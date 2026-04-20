@@ -226,7 +226,7 @@
     .content { flex: 1; overflow-y: auto; padding: 20px; }
 
     /* ── 统计卡片 ── */
-    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 20px; }
     .stat-card {
       background: var(--white); border-radius: var(--radius); padding: 18px 20px;
       border: 1px solid var(--border); box-shadow: var(--shadow);
@@ -244,6 +244,8 @@
     .stat-icon.purple { background: #ede9fe; }
     .stat-icon.amber { background: #fef3c7; }
     .stat-icon.green { background: #dcfce7; }
+    .stat-icon.orange { background: #ffedd5; }
+    .stat-icon.teal { background: #ccfbf1; }
     .stat-num { font-size: 26px; font-weight: 700; color: var(--text-primary); line-height: 1; }
     .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
 
@@ -537,7 +539,7 @@
 
     /* ── 响应式 ── */
     @media (max-width: 1100px) {
-      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .stats-grid { grid-template-columns: repeat(3, 1fr); }
     }
     @media (max-width: 800px) {
       :root { --sidebar-w: 60px; }
@@ -674,6 +676,20 @@
           <div>
             <div class="stat-num" id="st-paid">0</div>
             <div class="stat-label">已缴费</div>
+          </div>
+        </div>
+        <div class="stat-card" id="sc-submitted" onclick="switchType('submitted')">
+          <div class="stat-icon orange">📋</div>
+          <div>
+            <div class="stat-num" id="st-submitted">0</div>
+            <div class="stat-label">已投稿</div>
+          </div>
+        </div>
+        <div class="stat-card" id="sc-finished" onclick="switchType('finished')">
+          <div class="stat-icon teal">✅</div>
+          <div>
+            <div class="stat-num" id="st-finished">0</div>
+            <div class="stat-label">已结项</div>
           </div>
         </div>
       </div>
@@ -1233,8 +1249,8 @@ async function render() {
 
   // 过滤数据
   let data;
-  if (g.type === 'paid') {
-    data = allCustomers.filter(c=>c.status==='paid');
+  if (g.type === 'paid' || g.type === 'submitted' || g.type === 'finished') {
+    data = allCustomers.filter(c=>c.status===g.type);
   } else {
     data = g.type==='all' ? [...allCustomers] : allCustomers.filter(c=>c.type===g.type);
     if (g.status !== 'all') data = data.filter(c=>c.status===g.status);
@@ -1262,10 +1278,12 @@ async function render() {
   document.getElementById('st-conference').textContent = allCustomers.filter(c=>c.type==='conference').length;
   document.getElementById('st-journal').textContent = allCustomers.filter(c=>c.type==='journal').length;
   document.getElementById('st-paid').textContent = allCustomers.filter(c=>c.status==='paid').length;
+  document.getElementById('st-submitted').textContent = allCustomers.filter(c=>c.status==='submitted').length;
+  document.getElementById('st-finished').textContent = allCustomers.filter(c=>c.status==='finished').length;
 
   // 统计卡片高亮
-  ['sc-all','sc-conference','sc-journal','sc-paid'].forEach(id => document.getElementById(id).classList.remove('active'));
-  const cardMap = { all:'sc-all', conference:'sc-conference', journal:'sc-journal', paid:'sc-paid' };
+  ['sc-all','sc-conference','sc-journal','sc-paid','sc-submitted','sc-finished'].forEach(id => document.getElementById(id).classList.remove('active'));
+  const cardMap = { all:'sc-all', conference:'sc-conference', journal:'sc-journal', paid:'sc-paid', submitted:'sc-submitted', finished:'sc-finished' };
   if (cardMap[g.type]) document.getElementById(cardMap[g.type]).classList.add('active');
 
   // 分页
