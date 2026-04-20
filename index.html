@@ -1410,6 +1410,7 @@ function openAddModal() {
 function openEditModal(id) {
   const c = allCustomers.find(x => x.id === id); if (!c) return;
   g.editingId = id;
+  g.editingType = c.type || 'conference'; // 记住原始类型
   document.getElementById('form-modal-title').textContent = '编辑客户信息';
   document.getElementById('f-name').value = c.name||'';
   document.getElementById('f-phone').value = c.phone||'';
@@ -1452,6 +1453,7 @@ async function saveCustomer() {
   };
 
   if (g.editingId) {
+    data.type = g.editingType || 'conference'; // 编辑时保留原始类型
     const ok = await updateCustomer(g.editingId, data);
     toast(ok ? '✅ 修改成功，已同步云端' : '❌ 修改失败，请重试');
     if (ok && currentDetailId===g.editingId) await renderDrawer(g.editingId);
