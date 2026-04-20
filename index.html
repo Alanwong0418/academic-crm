@@ -1013,10 +1013,10 @@ async function loadCustomers() {
         migrated = true;
       }
     }
-    // 只在首次迁移后重载一次，确保数据一致
     if (migrated) {
+      // 重载确保数据一致
       const reloaded = await sbFetch('/rest/v1/customers?user_id=eq.' + currentUser.id + '&order=update_time.desc');
-      return reloaded || [];
+      return reloaded || list;
     }
     return list;
   } catch(e) { toast('加载数据失败'); return []; }
@@ -1056,23 +1056,24 @@ async function createCustomer(data) {
 }
 
 async function updateCustomer(id, data) {
-  // 将本地字段名转为云端字段名
-  const cloudData = {
-    name: data.name,
-    phone: data.phone || '',
-    email: data.email || '',
-    company: data.company || '',
-    title: data.title || '',
-    research: data.research || '',
-    order_no: data.orderNo || '',
-    conference: data.conference || '',
-    status: data.status || 'submitted',
-    type: data.type || '',
-    remarks: data.remarks || '',
-    update_time: now()
-  };
+  // 只传实际传入的字段，避免未传入的字段被清空
+  const cloudData = { update_time: now() };
+  if (data.name !== undefined) cloudData.name = data.name;
+  if (data.phone !== undefined) cloudData.phone = data.phone;
+  if (data.email !== undefined) cloudData.email = data.email;
+  if (data.company !== undefined) cloudData.company = data.company;
+  if (data.title !== undefined) cloudData.title = data.title;
+  if (data.research !== undefined) cloudData.research = data.research;
+  if (data.orderNo !== undefined) cloudData.order_no = data.orderNo;
+  if (data.conference !== undefined) cloudData.conference = data.conference;
+  if (data.status !== undefined) cloudData.status = data.status;
+  if (data.type !== undefined) cloudData.type = data.type;
+  if (data.remarks !== undefined) cloudData.remarks = data.remarks;
   try {
     await sbFetch('/rest/v1/customers?id=eq.' + id, { method: 'PATCH', body: JSON.stringify(cloudData) });
+    // 同步更新本地数据
+    const c = allCustomers.find(x => x.id === id);
+    if (c) Object.assign(c, data);
     return true;
   } catch(e) { toast('更新失败'); return false; }
 }
