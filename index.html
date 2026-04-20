@@ -116,6 +116,17 @@
     }
     .nav-item.active .nav-count { background: rgba(255,255,255,.25); color: #fff; }
 
+    /* ── 侧边栏子菜单 ── */
+    .nav-sub { padding-left: 24px; overflow: hidden; max-height: 0; transition: max-height .2s ease; }
+    .nav-sub.open { max-height: 200px; }
+    .nav-parent { position: relative; }
+    .nav-arrow {
+      margin-left: auto; font-size: 10px; color: rgba(255,255,255,.4);
+      transition: transform .2s;
+    }
+    .nav-parent.open .nav-arrow { transform: rotate(90deg); }
+    .nav-sub .nav-item { padding: 7px 12px; font-size: 13px; }
+
     .sidebar-footer {
       padding: 14px 10px;
       border-top: 1px solid rgba(255,255,255,.07);
@@ -476,6 +487,42 @@
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+    /* ── 全局 Loading 遮罩 ── */
+    .loading-mask {
+      position: fixed; inset: 0; background: rgba(0,0,0,.15);
+      z-index: 9998; display: none; align-items: center; justify-content: center;
+    }
+    .loading-mask.show { display: flex; }
+    .loading-spinner {
+      background: var(--white); border-radius: 12px; padding: 20px 28px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.15);
+      display: flex; align-items: center; gap: 10px;
+      font-size: 14px; color: var(--text-primary); font-weight: 500;
+    }
+    .loading-spinner::before {
+      content: ''; width: 20px; height: 20px; border: 2.5px solid var(--border);
+      border-top-color: var(--brand); border-radius: 50%;
+      animation: spin .6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── 按钮 Loading 状态 ── */
+    .btn.loading, .auth-btn.loading {
+      pointer-events: none; opacity: .65; position: relative; color: transparent !important;
+    }
+    .btn.loading::after, .auth-btn.loading::after {
+      content: ''; position: absolute; width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%;
+      animation: spin .6s linear infinite; left: 50%; top: 50%;
+      margin-left: -8px; margin-top: -8px;
+    }
+    .btn-outline.loading, .btn-ghost.loading {
+      color: transparent !important;
+    }
+    .btn-outline.loading::after, .btn-ghost.loading::after {
+      border: 2px solid var(--border); border-top-color: var(--brand);
+    }
+
     /* ── 状态切换下拉 ── */
     .status-select {
       padding: 4px 28px 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500;
@@ -533,20 +580,23 @@
     </div>
     <nav class="sidebar-nav">
       <div class="nav-group-label">客户管理</div>
-      <div class="nav-item active" id="nav-all" onclick="switchType('all')">
+      <div class="nav-item nav-parent active" id="nav-all" onclick="toggleNavSub()">
         <span class="nav-icon">👥</span>
         <span>全部客户</span>
         <span class="nav-count" id="nc-all">0</span>
+        <span class="nav-arrow">▶</span>
       </div>
-      <div class="nav-item" id="nav-conference" onclick="switchType('conference')">
-        <span class="nav-icon">🎓</span>
-        <span>会议客户</span>
-        <span class="nav-count" id="nc-conf">0</span>
-      </div>
-      <div class="nav-item" id="nav-journal" onclick="switchType('journal')">
-        <span class="nav-icon">📖</span>
-        <span>期刊客户</span>
-        <span class="nav-count" id="nc-jour">0</span>
+      <div class="nav-sub" id="nav-sub">
+        <div class="nav-item" id="nav-conference" onclick="switchType('conference')">
+          <span class="nav-icon">🎓</span>
+          <span>会议客户</span>
+          <span class="nav-count" id="nc-conf">0</span>
+        </div>
+        <div class="nav-item" id="nav-journal" onclick="switchType('journal')">
+          <span class="nav-icon">📖</span>
+          <span>期刊客户</span>
+          <span class="nav-count" id="nc-jour">0</span>
+        </div>
       </div>
     </nav>
     <div class="sidebar-bottom-actions">
@@ -767,6 +817,11 @@
 
 <!-- 隐藏导入 -->
 <input type="file" id="file-input" accept=".json" style="display:none;" onchange="handleFileImport(this)" />
+
+<!-- 全局 Loading 遮罩 -->
+<div class="loading-mask" id="loading-mask">
+  <div class="loading-spinner" id="loading-spinner">处理中...</div>
+</div>
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
@@ -1070,6 +1125,23 @@ function toast(msg) {
 }
 
 // ═══════════════════════════════════════════════════
+//  Loading 工具
+// ═══════════════════════════════════════════════════
+function showLoading(msg) {
+  document.getElementById('loading-spinner').textContent = msg || '处理中...';
+  document.getElementById('loading-mask').classList.add('show');
+}
+function hideLoading() {
+  document.getElementById('loading-mask').classList.remove('show');
+}
+// 给按钮加 loading 状态，返回取消函数
+function btnLoading(btn, originalText) {
+  btn.classList.add('loading');
+  if (originalText) btn._originalText = originalText;
+  return () => { btn.classList.remove('loading'); };
+}
+
+// ═══════════════════════════════════════════════════
 //  mini 弹窗
 // ═══════════════════════════════════════════════════
 let _miniResolve;
@@ -1117,7 +1189,11 @@ async function render() {
   document.getElementById('nc-all').textContent = confCnt + jourCnt;
 
   // 侧边栏激活
-  document.getElementById('nav-all').className = 'nav-item' + (g.type==='all' ? ' active' : '');
+  const sub = document.getElementById('nav-sub');
+  const parent = document.getElementById('nav-all');
+  const isSubOpen = g.type === 'conference' || g.type === 'journal';
+  parent.className = 'nav-item nav-parent' + (g.type==='all' ? ' active' : '') + (isSubOpen ? ' open' : '');
+  sub.className = 'nav-sub' + (isSubOpen ? ' open' : '');
   document.getElementById('nav-conference').className = 'nav-item' + (g.type==='conference' ? ' active' : '');
   document.getElementById('nav-journal').className = 'nav-item' + (g.type==='journal' ? ' active' : '');
 
@@ -1269,6 +1345,14 @@ function renderTable() { render(); }
 //  交互
 // ═══════════════════════════════════════════════════
 function switchType(type) { g.type=type; g.status='all'; g.kw=''; g.page=1; document.getElementById('search-input').value=''; document.getElementById('clear-x').style.display='none'; render(); }
+function toggleNavSub() {
+  const sub = document.getElementById('nav-sub');
+  const parent = document.getElementById('nav-all');
+  sub.classList.toggle('open');
+  parent.classList.toggle('open');
+  // 点击全部客户时也切换到 all 视图
+  if (g.type !== 'all') { g.type='all'; g.status='all'; render(); }
+}
 function setStatus(s) { g.status=s; g.page=1; render(); }
 function onSearch(v) { g.kw=v; g.page=1; document.getElementById('clear-x').style.display=v?'block':'none'; render(); }
 function clearSearch() { g.kw=''; document.getElementById('search-input').value=''; document.getElementById('clear-x').style.display='none'; render(); }
@@ -1351,34 +1435,43 @@ async function renderDrawer(id) {
 }
 
 async function onStatusChange(id, status) {
-  const ok = await updateCustomer(id, { status });
-  if (!ok) { toast('❌ 状态更新失败'); return; }
-  await renderDrawer(id);
-  render();
-  toast('✅ 状态已更新，已同步云端');
+  showLoading('更新状态中...');
+  try {
+    const ok = await updateCustomer(id, { status });
+    if (!ok) { toast('❌ 状态更新失败'); return; }
+    await renderDrawer(id);
+    render();
+    toast('✅ 状态已更新，已同步云端');
+  } finally { hideLoading(); }
 }
 
 async function addFollowUI(id) {
   const r = await miniModal({ title:'添加跟进记录', showTA:true, confirm:'添加', content:'' });
   if (!r.ok || !r.val || !r.val.trim()) return;
-  const rec = await addFollowRecord(id, r.val.trim());
-  if (!rec) { toast('❌ 跟进记录添加失败'); return; }
-  await renderDrawer(id);
-  render();
-  toast('✅ 跟进记录已添加，已同步云端');
+  showLoading('保存跟进记录中...');
+  try {
+    const rec = await addFollowRecord(id, r.val.trim());
+    if (!rec) { toast('❌ 跟进记录添加失败'); return; }
+    await renderDrawer(id);
+    render();
+    toast('✅ 跟进记录已添加，已同步云端');
+  } finally { hideLoading(); }
 }
 
 async function deleteCustomerUI(id) {
   const c = allCustomers.find(x => x.id === id); if (!c) return;
   const r = await miniModal({ title:'删除客户', content:`确定要删除「${c.name}」吗？此操作不可恢复。`, confirm:'删除', danger:true });
   if (!r.ok) return;
-  console.log('删除调试 - customer id:', id, ', user_id:', currentUser.id);
-  const ok = await deleteCustomer(id);
-  if (!ok) return;
-  if (currentDetailId===id) closeDrawer();
-  allCustomers = allCustomers.filter(x => x.id !== id);
-  render();
-  toast('✅ 已删除，已同步云端');
+  showLoading('删除中...');
+  try {
+    const ok = await deleteCustomer(id);
+    if (!ok) return;
+    if (currentDetailId===id) closeDrawer();
+    allCustomers = allCustomers.filter(x => x.id !== id);
+    render();
+    toast('✅ 已删除，已同步云端');
+  } finally { hideLoading(); }
+}
 }
 
 // ═══════════════════════════════════════════════════
@@ -1441,28 +1534,37 @@ async function saveCustomer() {
   if (!/^1[3-9]\d{9}$/.test(phone)) { toast('请输入正确的手机号'); return; }
   if (email && !/[\w.\-]+@[\w.\-]+\.\w+/.test(email)) { toast('请输入正确的邮箱'); return; }
 
-  const data = {
-    name, phone, email,
-    company: document.getElementById('f-company').value.trim(),
-    title: document.getElementById('f-title').value.trim(),
-    research: document.getElementById('f-research').value.trim(),
-    orderNo: document.getElementById('f-orderno').value.trim(),
-    conference: document.getElementById('f-conference').value.trim(),
-    status: document.getElementById('f-status').value,
-    remarks: document.getElementById('f-remarks').value.trim()
-  };
+  // 防止重复点击
+  const saveBtn = document.querySelector('.modal-footer .btn-primary');
+  if (saveBtn.classList.contains('loading')) return;
+  const done = btnLoading(saveBtn, '保存客户');
 
-  if (g.editingId) {
-    data.type = g.editingType || 'conference'; // 编辑时保留原始类型
-    const ok = await updateCustomer(g.editingId, data);
-    toast(ok ? '✅ 修改成功，已同步云端' : '❌ 修改失败，请重试');
-    if (ok && currentDetailId===g.editingId) await renderDrawer(g.editingId);
-  } else {
-    data.type = (g.type === 'all' || g.type === 'signed') ? document.getElementById('f-type').value : g.type;
-    const c = await createCustomer(data);
-    toast(c ? '✅ 添加成功，已同步云端' : '❌ 添加失败，请重试');
-  }
-  closeFormModal();
+  try {
+    const data = {
+      name, phone, email,
+      company: document.getElementById('f-company').value.trim(),
+      title: document.getElementById('f-title').value.trim(),
+      research: document.getElementById('f-research').value.trim(),
+      orderNo: document.getElementById('f-orderno').value.trim(),
+      conference: document.getElementById('f-conference').value.trim(),
+      status: document.getElementById('f-status').value,
+      remarks: document.getElementById('f-remarks').value.trim()
+    };
+
+    if (g.editingId) {
+      data.type = g.editingType || 'conference'; // 编辑时保留原始类型
+      const ok = await updateCustomer(g.editingId, data);
+      toast(ok ? '✅ 修改成功，已同步云端' : '❌ 修改失败，请重试');
+      if (ok && currentDetailId===g.editingId) await renderDrawer(g.editingId);
+    } else {
+      data.type = (g.type === 'all' || g.type === 'signed') ? document.getElementById('f-type').value : g.type;
+      const c = await createCustomer(data);
+      toast(c ? '✅ 添加成功，已同步云端' : '❌ 添加失败，请重试');
+    }
+    closeFormModal();
+    render();
+  } finally { done(); }
+}
   render();
 }
 
@@ -1508,21 +1610,27 @@ async function doExportCSV() {
 
   const d = new Date();
   const fn = `客户资料_${d.getFullYear()}${p2(d.getMonth()+1)}${p2(d.getDate())}.csv`;
-  dl('\ufeff' + s, fn, 'text/csv;charset=utf-8;');
-  toast('✅ Excel 已下载');
+  showLoading('正在导出...');
+  try {
+    dl('\ufeff' + s, fn, 'text/csv;charset=utf-8;');
+    toast('✅ Excel 已下载');
+  } finally { hideLoading(); }
 }
 
 async function doExportJSON() {
   if (!allCustomers.length) { toast('暂无数据'); return; }
-  // 加载所有跟进记录
-  const exportData = [];
-  for (const c of allCustomers) {
-    const records = await loadFollowRecords(c.id);
-    exportData.push({ ...c, followRecords: records });
-  }
-  const d=new Date(); const fn=`备份客户数据_${exportData.length}条_${now()}.json`;
-  dl(JSON.stringify({version:'2.0-cloud',backupTime:nowFull(),customerCount:exportData.length,customers:exportData},null,2), fn, 'application/json');
-  toast('✅ 备份已下载');
+  showLoading('正在备份...');
+  try {
+    // 加载所有跟进记录
+    const exportData = [];
+    for (const c of allCustomers) {
+      const records = await loadFollowRecords(c.id);
+      exportData.push({ ...c, followRecords: records });
+    }
+    const d=new Date(); const fn=`备份客户数据_${exportData.length}条_${now()}.json`;
+    dl(JSON.stringify({version:'2.0-cloud',backupTime:nowFull(),customerCount:exportData.length,customers:exportData},null,2), fn, 'application/json');
+    toast('✅ 备份已下载');
+  } finally { hideLoading(); }
 }
 
 function dl(content, filename, type) {
