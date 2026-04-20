@@ -786,7 +786,6 @@
         <div class="form-group">
           <label class="form-label">客户状态</label>
           <select class="form-select" id="f-status">
-            <option value="potential">潜在客户</option>
             <option value="submitted">已投稿</option>
             <option value="paid">已缴费</option>
             <option value="finished">已结项</option>
@@ -1003,7 +1002,16 @@ async function loadCustomers() {
   if (!currentUser) return [];
   try {
     const json = await sbFetch('/rest/v1/customers?user_id=eq.' + currentUser.id + '&order=update_time.desc');
-    return json || [];
+    const list = json || [];
+    // 自动迁移旧状态值并同步到数据库
+    for (const c of list) {
+      if (STATUS_MIGRATE[c.status]) {
+        const newStatus = STATUS_MIGRATE[c.status];
+        updateCustomer(c.id, { status: newStatus });
+        c.status = newStatus;
+      }
+    }
+    return list;
   } catch(e) { toast('加载数据失败'); return []; }
 }
 
@@ -1104,9 +1112,11 @@ function now() { const d=new Date(); return `${d.getFullYear()}-${p2(d.getMonth(
 function nowFull() { const d=new Date(); return `${now()} ${p2(d.getHours())}:${p2(d.getMinutes())}`; }
 function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
 
-const STATUS = { potential:'潜在客户', submitted:'已投稿', paid:'已缴费', finished:'已结项' };
-const BADGE_CLASS = { potential:'badge-potential', submitted:'badge-submitted', paid:'badge-paid', finished:'badge-finished' };
-const STATUS_SEL_CLASS = { potential:'potential', submitted:'submitted', paid:'paid', finished:'finished' };
+const STATUS = { submitted:'已投稿', paid:'已缴费', finished:'已结项' };
+const BADGE_CLASS = { submitted:'badge-submitted', paid:'badge-paid', finished:'badge-finished' };
+const STATUS_SEL_CLASS = { submitted:'submitted', paid:'paid', finished:'finished' };
+// 旧状态值兼容映射（数据库中可能存有旧值）
+const STATUS_MIGRATE = { contacted:'submitted', signed:'paid', completed:'finished' };
 
 // ═══════════════════════════════════════════════════
 //  全局状态
@@ -1205,7 +1215,6 @@ async function render() {
   // 筛选标签
   const chips = [
     {v:'all',l:'全部'},
-    {v:'potential',l:'潜在客户'},
     {v:'submitted',l:'已投稿'},
     {v:'paid',l:'已缴费'},
     {v:'finished',l:'已结项'}
@@ -1244,7 +1253,7 @@ async function render() {
   document.getElementById('st-total').textContent = allCustomers.length;
   document.getElementById('st-conference').textContent = allCustomers.filter(c=>c.type==='conference').length;
   document.getElementById('st-journal').textContent = allCustomers.filter(c=>c.type==='journal').length;
-  document.getElementById('st-signed').textContent = allCustomers.filter(c=>c.status==='paid').length;
+  document.getElementById('st-paid').textContent = allCustomers.filter(c=>c.status==='paid').length;
 
   // 统计卡片高亮
   ['sc-all','sc-conference','sc-journal','sc-paid'].forEach(id => document.getElementById(id).classList.remove('active'));
@@ -1415,7 +1424,6 @@ async function renderDrawer(id) {
         <div class="hero-name">${esc(c.name)}</div>
         <div class="hero-meta">
           <select class="status-select ${STATUS_SEL_CLASS[c.status]||''}" onchange="onStatusChange('${c.id}',this.value)">
-            <option value="potential" ${c.status==='potential'?'selected':''}>潜在客户</option>
             <option value="submitted" ${c.status==='submitted'?'selected':''}>已投稿</option>
             <option value="paid" ${c.status==='paid'?'selected':''}>已缴费</option>
             <option value="finished" ${c.status==='finished'?'selected':''}>已结项</option>
@@ -1515,7 +1523,7 @@ function openEditModal(id) {
   document.getElementById('f-research').value = c.research||'';
   document.getElementById('f-orderno').value = c.order_no||'';
   document.getElementById('f-conference').value = c.conference||'';
-  document.getElementById('f-status').value = c.status||'potential';
+  document.getElementById('f-status').value = c.status||'submitted';
   document.getElementById('f-remarks').value = c.remarks||'';
   const isConf = c.type==='conference';
   document.getElementById('f-conf-label').textContent = isConf ? '关联会议' : '意向期刊';
@@ -1573,7 +1581,7 @@ async function saveCustomer() {
 // ═══════════════════════════════════════════════════
 async function doExportCSV() {
   if (!allCustomers.length) { toast('暂无数据可导出'); return; }
-  const ST = { potential:'潜在客户', submitted:'已投稿', paid:'已缴费', finished:'已结项' };
+  const ST = { submitted:'已投稿', paid:'已缴费', finished:'已结项' };
   const TY = { conference:'会议客户', journal:'期刊客户' };
 
   function csvCell(v) {
