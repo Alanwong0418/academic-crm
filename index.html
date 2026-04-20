@@ -1004,12 +1004,19 @@ async function loadCustomers() {
     const json = await sbFetch('/rest/v1/customers?user_id=eq.' + currentUser.id + '&order=update_time.desc');
     const list = json || [];
     // 自动迁移旧状态值并同步到数据库
+    let migrated = false;
     for (const c of list) {
       if (STATUS_MIGRATE[c.status]) {
         const newStatus = STATUS_MIGRATE[c.status];
-        updateCustomer(c.id, { status: newStatus });
+        try { await updateCustomer(c.id, { status: newStatus }); } catch(e) {}
         c.status = newStatus;
+        migrated = true;
       }
+    }
+    // 只在首次迁移后重载一次，确保数据一致
+    if (migrated) {
+      const reloaded = await sbFetch('/rest/v1/customers?user_id=eq.' + currentUser.id + '&order=update_time.desc');
+      return reloaded || [];
     }
     return list;
   } catch(e) { toast('加载数据失败'); return []; }
