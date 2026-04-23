@@ -1,0 +1,2068 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>H8564 会议进度管理系统</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --brand: #2563eb;
+      --brand-dark: #1d4ed8;
+      --brand-light: #eff6ff;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --info: #3b82f6;
+      --muted: #94a3b8;
+      --text-primary: #111827;
+      --text-secondary: #6b7280;
+      --text-muted: #9ca3af;
+      --border: #e5e7eb;
+      --bg: #f9fafb;
+      --white: #fff;
+      --sidebar-w: 220px;
+      --header-h: 56px;
+      --radius: 8px;
+      --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,.1);
+    }
+    html,body { height:100%; font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif; font-size:14px; color:var(--text-primary); background:var(--bg); }
+    button { cursor:pointer; border:none; outline:none; font-family:inherit; }
+    input,textarea,select { font-family:inherit; outline:none; }
+    a { text-decoration:none; color:inherit; }
+
+    /* ─── 登录页 ─── */
+    .auth-page { min-height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#1e3a5f,#2563eb); padding:20px; }
+    .auth-box { background:#fff; border-radius:16px; padding:40px 36px; width:100%; max-width:400px; box-shadow:0 20px 60px rgba(0,0,0,.2); }
+    .auth-logo { width:56px; height:56px; border-radius:14px; background:var(--brand); display:flex; align-items:center; justify-content:center; font-size:26px; margin:0 auto 18px; }
+    .auth-title { text-align:center; font-size:22px; font-weight:700; margin-bottom:4px; }
+    .auth-sub { text-align:center; color:var(--text-secondary); font-size:13px; margin-bottom:28px; }
+    .auth-input { width:100%; padding:11px 14px; border:1.5px solid var(--border); border-radius:8px; margin-bottom:12px; font-size:14px; transition:border-color .15s; }
+    .auth-input:focus { border-color:var(--brand); }
+    .auth-btn { width:100%; padding:12px; background:var(--brand); color:#fff; border-radius:8px; font-size:15px; font-weight:600; transition:background .15s; }
+    .auth-btn:hover { background:var(--brand-dark); }
+    .auth-btn:disabled { opacity:.6; cursor:not-allowed; }
+    .auth-err { color:var(--danger); font-size:12px; margin-top:8px; text-align:center; min-height:18px; }
+    .auth-switch { text-align:center; margin-top:16px; font-size:13px; color:var(--text-secondary); }
+    .auth-switch span { color:var(--brand); cursor:pointer; font-weight:600; }
+
+    /* ─── 主布局（左侧边栏 + 右内容） ─── */
+    #app { display:none; height:100vh; overflow:hidden; }
+    #app.active { display:flex; }
+
+    /* ══ 侧边栏 ══ */
+    .sidebar {
+      width: var(--sidebar-w); flex-shrink: 0;
+      background: #1e293b;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .sidebar-brand {
+      height: var(--header-h);
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 18px;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+    }
+    .brand-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: var(--brand);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0;
+    }
+    .brand-name { color: #fff; font-size: 15px; font-weight: 600; letter-spacing: .3px; }
+    .brand-sub { color: rgba(255,255,255,.35); font-size: 11px; margin-top: 1px; }
+    .sidebar-nav { flex: 1; padding: 12px 10px; overflow-y: auto; }
+    .sidebar-nav::-webkit-scrollbar { width: 4px; }
+    .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 2px; }
+    .nav-group-label {
+      font-size: 11px; color: rgba(255,255,255,.3);
+      text-transform: uppercase; letter-spacing: .8px;
+      padding: 10px 8px 6px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: 6px;
+      color: rgba(255,255,255,.6); cursor: pointer;
+      transition: all .15s; margin-bottom: 2px;
+      font-size: 13.5px;
+    }
+    .nav-item:hover { background: rgba(255,255,255,.07); color: rgba(255,255,255,.9); }
+    .nav-item.active { background: var(--brand); color: #fff; }
+    .nav-icon { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+    .nav-count {
+      margin-left: auto; background: rgba(255,255,255,.15); color: rgba(255,255,255,.7);
+      font-size: 11px; padding: 1px 7px; border-radius: 10px; min-width: 24px; text-align: center;
+    }
+    .nav-item.active .nav-count { background: rgba(255,255,255,.25); color: #fff; }
+    .sidebar-footer {
+      padding: 14px 10px;
+      border-top: 1px solid rgba(255,255,255,.07);
+    }
+    .sidebar-user {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 10px; border-radius: 6px;
+      background: rgba(255,255,255,.05);
+    }
+    .user-avatar-sm {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--brand); color: #fff;
+      font-size: 12px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .user-email-sm {
+      flex: 1; color: rgba(255,255,255,.5); font-size: 12px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .user-logout-btn {
+      background: rgba(255,255,255,.1); border: none;
+      color: rgba(255,255,255,.6); font-size: 11px; padding: 4px 8px;
+      border-radius: 4px; cursor: pointer; white-space: nowrap; transition: all .15s;
+    }
+    .user-logout-btn:hover { background: rgba(255,255,255,.15); color: #fff; }
+
+    /* ══ 主内容区 ══ */
+    .main-content {
+      flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden;
+    }
+
+    /* ─── 顶部工具栏 ─── */
+    .topbar {
+      height: var(--header-h); flex-shrink: 0;
+      background: var(--white); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 12px; padding: 0 20px;
+    }
+    .topbar-title { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-right: 4px; }
+    .topbar-badge {
+      background: var(--brand-light); color: var(--brand);
+      font-size: 12px; font-weight: 500;
+      padding: 2px 8px; border-radius: 12px;
+    }
+    .topbar-spacer { flex: 1; }
+    .view-toggle { display:flex; align-items:center; gap:4px; background:var(--bg); border-radius:6px; padding:3px; border:1px solid var(--border); }
+    .view-btn { padding:4px 10px; border-radius:4px; font-size:13px; font-weight:500; color:var(--text-secondary); background:transparent; transition:all .15s; display:flex; align-items:center; gap:4px; }
+    .view-btn.active { background:var(--white); color:var(--brand); box-shadow:var(--shadow); }
+    .search-box {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+      padding: 0 12px; height: 34px; width: 240px; transition: all .15s;
+    }
+    .search-box:focus-within { border-color: var(--brand); background: var(--white); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+    .search-box input { flex: 1; border: none; background: transparent; color: var(--text-primary); font-size: 13px; }
+    .search-box input::placeholder { color: var(--text-muted); }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 0 14px; height: 34px; border-radius: 6px;
+      font-size: 13.5px; font-weight: 500; cursor: pointer; transition: all .15s;
+      white-space: nowrap;
+    }
+    .btn-primary { background: var(--brand); color: #fff; border: none; }
+    .btn-primary:hover { background: var(--brand-dark); }
+
+    /* ─── 内容区 ─── */
+    .content { flex: 1; overflow-y: auto; padding: 20px; }
+
+    /* ─── 统计卡片 ─── */
+    .stats-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 20px; }
+    .stat-card {
+      background: var(--white); border-radius: var(--radius); padding: 18px 20px;
+      border: 1px solid var(--border); box-shadow: var(--shadow);
+      display: flex; align-items: center; gap: 14px;
+      cursor: pointer; transition: all .15s;
+    }
+    .stat-card:hover { border-color: var(--brand); box-shadow: var(--shadow-md); }
+    .stat-card.active { border-color: var(--brand); background: var(--brand-light); }
+    .stat-icon {
+      width: 44px; height: 44px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; font-size: 20px;
+      flex-shrink: 0;
+    }
+    .stat-icon.blue { background: #dbeafe; }
+    .stat-icon.green { background: #dcfce7; }
+    .stat-icon.gray { background: #f1f5f9; }
+    .stat-icon.red { background: #fee2e2; }
+    .stat-icon.amber { background: #fef3c7; }
+    .stat-icon.purple { background: #ede9fe; }
+    .stat-num { font-size: 26px; font-weight: 700; color: var(--text-primary); line-height: 1; }
+    .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+
+    /* ─── 卡片视图 ─── */
+    #cardView { display:none; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:16px; }
+    #cardView.active { display:grid; }
+
+    .conf-card { background:var(--white); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; transition:box-shadow .2s,transform .2s; border:1px solid var(--border); }
+    .conf-card:hover { box-shadow:var(--shadow-md); transform:translateY(-2px); }
+    .card-top { padding:16px 18px 12px; }
+    .card-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:20px; font-size:11px; font-weight:600; margin-bottom:8px; }
+    .badge-active { background:#ecfdf5; color:#059669; }
+    .badge-upcoming { background:#eff6ff; color:#2563eb; }
+    .badge-done { background:#f1f5f9; color:#64748b; }
+    .badge-urgent { background:#fef2f2; color:#dc2626; }
+    .card-name { font-size:15px; font-weight:700; line-height:1.4; color:var(--text-primary); margin-bottom:8px; }
+    .card-meta { display:flex; flex-wrap:wrap; gap:8px; }
+    .card-meta-item { display:flex; align-items:center; gap:4px; font-size:12px; color:var(--text-secondary); }
+    .card-divider { height:1px; background:var(--border); margin:0 18px; }
+    .card-progress { padding:12px 18px 14px; }
+    .progress-label { display:flex; justify-content:space-between; align-items:center; margin-bottom:7px; }
+    .progress-text { font-size:12px; color:var(--text-secondary); }
+    .progress-pct { font-size:13px; font-weight:700; color:var(--brand); }
+    .progress-bar { height:6px; background:var(--bg); border-radius:3px; overflow:hidden; }
+    .progress-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,var(--brand),#60a5fa); transition:width .4s ease; }
+    .card-tasks { padding:0 18px 14px; display:flex; flex-direction:column; gap:5px; }
+    .task-row { display:flex; align-items:center; gap:7px; }
+    .task-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+    .dot-done { background:var(--success); }
+    .dot-overdue { background:var(--danger); }
+    .dot-soon { background:var(--warning); }
+    .dot-pending { background:#cbd5e1; }
+    .task-name { font-size:12px; color:var(--text-secondary); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .task-date { font-size:11px; color:var(--text-muted); flex-shrink:0; }
+    .card-foot { padding:10px 18px; border-top:1px solid var(--border); display:flex; gap:8px; }
+    .card-action { flex:1; padding:7px; border-radius:7px; font-size:13px; font-weight:500; text-align:center; transition:all .15s; }
+    .card-action.primary { background:var(--brand-light); color:var(--brand); }
+    .card-action.primary:hover { background:var(--brand); color:#fff; }
+    .card-action.ghost { background:var(--bg); color:var(--text-secondary); }
+    .card-action.ghost:hover { background:var(--border); }
+
+    /* ─── 时间轴视图 ─── */
+    #timelineView { display:none; flex-direction:column; gap:0; }
+    #timelineView.active { display:flex; }
+    .timeline-header { display:grid; grid-template-columns:200px 1fr; gap:0; background:var(--white); border-radius:var(--radius) var(--radius) 0 0; border:1px solid var(--border); border-bottom:none; overflow:hidden; }
+    .tl-head-left { padding:12px 16px; font-size:13px; font-weight:600; border-right:1px solid var(--border); background:#f8fafc; }
+    .tl-head-right { overflow:hidden; }
+    .month-labels { display:flex; height:38px; }
+    .month-cell { border-right:1px solid var(--border); display:flex; align-items:center; padding:0 8px; font-size:11px; font-weight:600; color:var(--text-muted); background:#f8fafc; white-space:nowrap; }
+    .timeline-body { border:1px solid var(--border); border-radius:0 0 var(--radius) var(--radius); overflow:hidden; }
+    .tl-row { display:grid; grid-template-columns:200px 1fr; border-bottom:1px solid var(--border); background:var(--white); transition:background .15s; }
+    .tl-row:last-child { border-bottom:none; }
+    .tl-row:hover { background:#f8fafc; }
+    .tl-name { padding:14px 16px; border-right:1px solid var(--border); }
+    .tl-name-main { font-size:13px; font-weight:600; line-height:1.3; margin-bottom:3px; }
+    .tl-name-sub { font-size:11px; color:var(--text-muted); }
+    .tl-bars { position:relative; overflow:hidden; height:80px; }
+    .tl-bar-wrap { position:absolute; top:0; left:0; right:0; bottom:0; }
+    .today-line { position:absolute; top:0; bottom:0; width:1.5px; background:var(--danger); opacity:.7; z-index:10; }
+    .today-label { position:absolute; top:4px; background:var(--danger); color:#fff; font-size:9px; font-weight:700; padding:1px 4px; border-radius:3px; transform:translateX(-50%); white-space:nowrap; z-index:11; }
+    .event-dot { position:absolute; top:50%; transform:translateY(-50%); width:10px; height:10px; border-radius:50%; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,.2); cursor:pointer; z-index:5; transition:transform .15s; }
+    .event-dot:hover { transform:translateY(-50%) scale(1.4); }
+    .event-bar { position:absolute; top:50%; transform:translateY(-50%); height:22px; border-radius:4px; display:flex; align-items:center; padding:0 7px; font-size:10px; font-weight:600; white-space:nowrap; overflow:hidden; cursor:pointer; z-index:5; transition:opacity .15s; }
+    .event-bar:hover { opacity:.85; }
+    .ev-deadline { background:linear-gradient(90deg,#ef4444,#f87171); color:#fff; }
+    .ev-pub { background:linear-gradient(90deg,#3b82f6,#60a5fa); color:#fff; }
+    .ev-promo { background:linear-gradient(90deg,#8b5cf6,#a78bfa); color:#fff; }
+    .ev-conf { background:linear-gradient(90deg,#10b981,#34d399); color:#fff; }
+    .ev-other { background:linear-gradient(90deg,#f59e0b,#fbbf24); color:#fff; }
+    .tl-row .tl-bars { height:80px; }
+
+    /* ─── 详情弹窗 ─── */
+    .overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; display:none; align-items:flex-start; justify-content:flex-end; }
+    .overlay.open { display:flex; }
+    .detail-panel { width:680px; height:100vh; background:#fff; overflow-y:auto; box-shadow:-8px 0 32px rgba(0,0,0,.15); display:flex; flex-direction:column; animation:slideIn .25s ease; }
+    @keyframes slideIn { from { transform:translateX(100%); } to { transform:translateX(0); } }
+    .panel-header { padding:20px 24px 16px; border-bottom:1px solid var(--border); display:flex; align-items:flex-start; gap:12px; flex-shrink:0; position:sticky; top:0; background:#fff; z-index:10; }
+    .panel-badge { padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600; flex-shrink:0; margin-top:3px; }
+    .panel-title { flex:1; }
+    .panel-name { font-size:18px; font-weight:700; line-height:1.4; margin-bottom:4px; }
+    .panel-meta { display:flex; flex-wrap:wrap; gap:12px; font-size:13px; color:var(--text-secondary); }
+    .panel-close { width:32px; height:32px; border-radius:8px; background:var(--bg); display:flex; align-items:center; justify-content:center; font-size:18px; color:var(--text-muted); flex-shrink:0; transition:all .15s; }
+    .panel-close:hover { background:var(--border); color:var(--text-primary); }
+    .panel-body { padding:20px 24px; flex:1; }
+    .section { margin-bottom:24px; }
+    .section-title { font-size:13px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:12px; display:flex; align-items:center; gap:6px; }
+    .section-title::before { content:''; width:3px; height:14px; background:var(--brand); border-radius:2px; display:inline-block; }
+    .task-grid { display:flex; flex-direction:column; gap:8px; }
+    .task-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; border:1px solid var(--border); transition:all .15s; }
+    .task-item:hover { border-color:var(--brand); background:var(--brand-light); }
+    .task-check { width:20px; height:20px; border-radius:6px; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer; transition:all .15s; font-size:12px; }
+    .task-check.checked { background:var(--success); border-color:var(--success); color:#fff; }
+    .task-check.overdue { border-color:var(--danger); background:#fef2f2; color:var(--danger); }
+    .task-info { flex:1; min-width:0; }
+    .task-item-name { font-size:13px; font-weight:500; color:var(--text-primary); }
+    .task-item-note { font-size:11px; color:var(--text-muted); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .task-status { flex-shrink:0; display:flex; align-items:center; gap:6px; }
+    .date-input { padding:5px 9px; border:1.5px solid var(--border); border-radius:6px; font-size:12px; color:var(--text-primary); background:#fff; width:130px; transition:border-color .15s; }
+    .date-input:focus { border-color:var(--brand); }
+    .status-tag { padding:3px 8px; border-radius:20px; font-size:11px; font-weight:600; flex-shrink:0; }
+    .tag-done { background:#ecfdf5; color:#059669; }
+    .tag-overdue { background:#fef2f2; color:#dc2626; }
+    .tag-soon { background:#fffbeb; color:#d97706; }
+    .tag-pending { background:#f1f5f9; color:#64748b; }
+    .tag-na { background:#f1f5f9; color:#94a3b8; }
+    .link-input { padding:5px 9px; border:1.5px solid var(--border); border-radius:6px; font-size:12px; color:var(--text-primary); background:#fff; width:200px; transition:border-color .15s; }
+    .link-input:focus { border-color:var(--brand); }
+    .sub-items { margin-left:28px; margin-top:6px; display:flex; flex-direction:column; gap:5px; }
+    .sub-item { display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; background:#f8fafc; border:1px solid var(--border); }
+    .sub-check { width:16px; height:16px; border-radius:4px; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer; transition:all .15s; font-size:10px; }
+    .sub-check.checked { background:var(--success); border-color:var(--success); color:#fff; }
+    .sub-name { font-size:12px; color:var(--text-secondary); flex:1; }
+    .sub-date { padding:4px 7px; border:1px solid var(--border); border-radius:5px; font-size:11px; background:#fff; width:120px; }
+    .panel-save { position:sticky; bottom:0; background:#fff; border-top:1px solid var(--border); padding:14px 24px; display:flex; gap:10px; flex-shrink:0; }
+    .save-btn { flex:1; padding:10px; background:var(--brand); color:#fff; border-radius:8px; font-size:14px; font-weight:600; transition:background .15s; }
+    .save-btn:hover { background:var(--brand-dark); }
+    .save-btn:disabled { opacity:.6; cursor:not-allowed; }
+    .cancel-btn { padding:10px 20px; background:var(--bg); color:var(--text-secondary); border-radius:8px; font-size:14px; font-weight:500; transition:background .15s; border:1px solid var(--border); }
+    .cancel-btn:hover { background:var(--border); }
+
+    /* ─── 新建会议弹窗 ─── */
+    .form-section-title { font-size:12px; font-weight:700; color:var(--brand); text-transform:uppercase; letter-spacing:.5px; padding:6px 0 4px; border-top:1px solid var(--border); margin-top:4px; }
+    .form-section-title:first-child { border-top:none; margin-top:0; padding-top:0; }
+    .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .info-field { display:flex; flex-direction:column; gap:3px; }
+    .info-label { font-size:11px; color:var(--text-muted); font-weight:600; }
+    .info-value { padding:7px 10px; border:1.5px solid var(--border); border-radius:7px; font-size:13px; color:var(--text-primary); background:#fff; transition:border-color .15s; }
+    .info-value:focus { border-color:var(--brand); }
+    .info-value.textarea { resize:vertical; min-height:60px; font-size:12px; }
+    .info-value.missing { color:var(--text-muted); }
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:2000; display:none; align-items:center; justify-content:center; padding:20px; }
+    .modal-overlay.open { display:flex; }
+    .modal { background:#fff; border-radius:16px; width:100%; max-width:580px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.2); }
+    .modal-header { padding:24px 24px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+    .modal-title { font-size:18px; font-weight:700; }
+    .modal-close { width:32px; height:32px; border-radius:8px; background:var(--bg); display:flex; align-items:center; justify-content:center; font-size:18px; color:var(--text-muted); }
+    .modal-close:hover { background:var(--border); }
+    .modal-body { padding:20px 24px; display:flex; flex-direction:column; gap:14px; }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .form-group { display:flex; flex-direction:column; gap:5px; }
+    .form-group.full { grid-column:1/-1; }
+    .form-label { font-size:13px; font-weight:600; color:var(--text-secondary); }
+    .form-input { padding:9px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; transition:border-color .15s; }
+    .form-input:focus { border-color:var(--brand); }
+    .form-input::placeholder { color:#d1d5db; }
+    .form-textarea { padding:9px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; resize:vertical; min-height:70px; transition:border-color .15s; }
+    .form-textarea:focus { border-color:var(--brand); }
+    .form-textarea::placeholder { color:#d1d5db; }
+    .modal-foot { padding:16px 24px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; }
+    .btn-primary { padding:9px 22px; background:var(--brand); color:#fff; border-radius:8px; font-size:14px; font-weight:600; transition:background .15s; }
+    .btn-primary:hover { background:var(--brand-dark); }
+    .btn-secondary { padding:9px 22px; background:var(--bg); color:var(--text-secondary); border-radius:8px; font-size:14px; font-weight:500; border:1px solid var(--border); }
+    .btn-secondary:hover { background:var(--border); }
+
+    /* ─── 空状态 ─── */
+    .empty { text-align:center; padding:60px 20px; color:var(--text-muted); }
+    .empty-icon { font-size:48px; margin-bottom:12px; }
+    .empty-text { font-size:16px; font-weight:600; margin-bottom:6px; color:var(--text-secondary); }
+    .empty-sub { font-size:13px; }
+
+    /* ─── 加载 ─── */
+    .loading { display:flex; align-items:center; justify-content:center; padding:60px; gap:10px; color:var(--text-muted); }
+    .spinner { width:24px; height:24px; border:3px solid var(--border); border-top-color:var(--brand); border-radius:50%; animation:spin .7s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* ─── Tooltip ─── */
+    .tooltip { position:fixed; background:#1e293b; color:#fff; padding:5px 10px; border-radius:6px; font-size:12px; pointer-events:none; z-index:9999; white-space:nowrap; display:none; }
+    .tooltip.show { display:block; }
+
+    /* ─── Toast ─── */
+    .toast-wrap { position:fixed; bottom:24px; right:24px; z-index:9998; display:flex; flex-direction:column; gap:8px; }
+    .toast { background:#1e293b; color:#fff; padding:10px 16px; border-radius:8px; font-size:13px; box-shadow:var(--shadow-md); animation:toastIn .25s ease; display:flex; align-items:center; gap:8px; }
+    .toast.success { border-left:3px solid var(--success); }
+    .toast.error { border-left:3px solid var(--danger); }
+    @keyframes toastIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+    /* ─── 响应式 ─── */
+    @media (max-width:1100px) { .stats-grid { grid-template-columns:repeat(3,1fr); } }
+    @media (max-width:768px) {
+      :root { --sidebar-w: 60px; }
+      .brand-name, .brand-sub, .nav-item > span:not(.nav-icon), .nav-count, .nav-group-label { display:none; }
+      .nav-item { justify-content:center; padding:10px; }
+      .sidebar-brand { justify-content:center; }
+      .user-email-sm, .user-logout-btn { display:none; }
+      .stats-grid { grid-template-columns:repeat(2,1fr); }
+      #cardView { grid-template-columns:1fr; }
+      .detail-panel { width:100vw; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 登录页 -->
+<div id="authPage" class="auth-page">
+  <div class="auth-box">
+    <div class="auth-logo">📋</div>
+    <div class="auth-title">H8564 会议管理系统</div>
+    <div class="auth-sub">学术会议全流程进度追踪</div>
+    <input id="authEmail" class="auth-input" type="email" placeholder="邮箱地址">
+    <input id="authPass" class="auth-input" type="password" placeholder="密码">
+    <button class="auth-btn" id="authLoginBtn" onclick="doLogin()">登 录</button>
+    <div class="auth-err" id="authErr"></div>
+    <div class="auth-switch">没有账号？<span onclick="doRegister()">立即注册</span></div>
+  </div>
+</div>
+
+<!-- 主应用 -->
+<div id="app">
+
+  <!-- ══════ 侧边栏 ══════ -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">📚</div>
+      <div>
+        <div class="brand-name">学术客户管家</div>
+        <div class="brand-sub">云端版</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-group-label">客户管理</div>
+      <div class="nav-item" style="opacity:.45;cursor:default;">
+        <span class="nav-icon">👥</span>
+        <span>全部客户</span>
+        <span class="nav-count">0</span>
+      </div>
+      <div class="nav-item" style="opacity:.45;cursor:default;">
+        <span class="nav-icon">🎓</span>
+        <span>会议客户</span>
+        <span class="nav-count">0</span>
+      </div>
+      <div class="nav-item" style="opacity:.45;cursor:default;">
+        <span class="nav-icon">📖</span>
+        <span>期刊客户</span>
+        <span class="nav-count">0</span>
+      </div>
+
+      <div class="nav-group-label">会议进度</div>
+      <div class="nav-item active" id="nav-conf-list" onclick="filterByStatus('all')">
+        <span class="nav-icon">📅</span>
+        <span>会议进度管理</span>
+        <span class="nav-count" id="confCount">0</span>
+      </div>
+      <div class="nav-item" style="opacity:.45;cursor:default;">
+        <span class="nav-icon">🔄</span>
+        <span>切换账号</span>
+      </div>
+
+      <div class="nav-group-label">数据管理</div>
+      <div class="nav-item" style="opacity:.45;cursor:default;">
+        <span class="nav-icon">📊</span>
+        <span>导出 Excel</span>
+      </div>
+      <div class="nav-item" style="opacity:.45;cursor:default;">
+        <span class="nav-icon">☁️</span>
+        <span>备份数据</span>
+      </div>
+      <div class="nav-item" style="opacity:.45;cursor:default;">
+        <span class="nav-icon">📥</span>
+        <span>导入数据</span>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="user-avatar-sm" id="sidebarAvatar">U</div>
+        <span class="user-email-sm" id="sidebarEmail">未登录</span>
+        <button class="user-logout-btn" onclick="doLogout()">退出</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══════ 主内容区 ══════ -->
+  <div class="main-content">
+    <!-- 顶部栏 -->
+    <div class="topbar">
+      <span class="topbar-title" id="pageTitle">全部会议</span>
+      <span class="topbar-badge" id="pageBadge">0 个会议</span>
+      <div class="topbar-spacer"></div>
+      <div class="view-toggle">
+        <button class="view-btn active" id="btnCard" onclick="switchView('card')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          看板
+        </button>
+        <button class="view-btn" id="btnTimeline" onclick="switchView('timeline')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          时间轴
+        </button>
+      </div>
+      <div class="search-box">
+        <span>🔍</span>
+        <input type="text" id="searchInputBox" placeholder="搜索会议名称…" oninput="onSearchChange(this.value)">
+      </div>
+      <button class="btn btn-primary" onclick="openAddModal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        新建会议
+      </button>
+    </div>
+
+    <!-- 内容区 -->
+    <div class="content">
+      <!-- 统计卡片 -->
+      <div class="stats-grid">
+        <div class="stat-card active" id="stat-all" onclick="filterByStatus('all')">
+          <div class="stat-icon blue">📅</div>
+          <div>
+            <div class="stat-num" id="statTotal">0</div>
+            <div class="stat-label">全部会议</div>
+          </div>
+        </div>
+        <div class="stat-card" id="stat-active" onclick="filterByStatus('active')">
+          <div class="stat-icon green">🚀</div>
+          <div>
+            <div class="stat-num" id="statActive">0</div>
+            <div class="stat-label">进行中</div>
+          </div>
+        </div>
+        <div class="stat-card" id="stat-upcoming" onclick="filterByStatus('upcoming')">
+          <div class="stat-icon amber">⏳</div>
+          <div>
+            <div class="stat-num" id="statUpcoming">0</div>
+            <div class="stat-label">即将截稿</div>
+          </div>
+        </div>
+        <div class="stat-card" id="stat-urgent" onclick="filterByStatus('urgent')">
+          <div class="stat-icon red">🔥</div>
+          <div>
+            <div class="stat-num" id="statUrgent">0</div>
+            <div class="stat-label">截稿紧急</div>
+          </div>
+        </div>
+        <div class="stat-card" id="stat-done" onclick="filterByStatus('done')">
+          <div class="stat-icon purple">✅</div>
+          <div>
+            <div class="stat-num" id="statDone">0</div>
+            <div class="stat-label">已完成</div>
+          </div>
+        </div>
+        <div class="stat-card" id="stat-this-month" onclick="filterByStatus('thismonth')">
+          <div class="stat-icon gray">🗓️</div>
+          <div>
+            <div class="stat-num" id="statThisMonth">0</div>
+            <div class="stat-label">本月开会</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 加载中 -->
+      <div class="loading" id="loadingDiv">
+        <div class="spinner"></div>
+        <span>加载数据中…</span>
+      </div>
+
+      <!-- 卡片视图 -->
+      <div id="cardView"></div>
+
+      <!-- 时间轴视图 -->
+      <div id="timelineView"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 详情侧滑面板 -->
+<div class="overlay" id="detailOverlay" onclick="closeDetail(event)">
+  <div class="detail-panel" id="detailPanel">
+    <div class="panel-header">
+      <div class="panel-badge" id="panelBadge"></div>
+      <div class="panel-title">
+        <div class="panel-name" id="panelName"></div>
+        <div class="panel-meta" id="panelMeta"></div>
+      </div>
+      <button class="panel-close" onclick="closeDetailPanel()">✕</button>
+    </div>
+    <div class="panel-body" id="panelBody"></div>
+    <div class="panel-save">
+      <button class="save-btn" onclick="saveProgress()">💾 保存进度</button>
+      <button class="cancel-btn" onclick="closeDetailPanel()">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- 新建会议弹窗 -->
+<div class="modal-overlay" id="addModal" onclick="closeAddModal(event)">
+  <div class="modal" onclick="e=>e.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title">➕ 新建会议</div>
+      <button class="modal-close" onclick="closeAddModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-section-title">基本信息</div>
+      <div class="form-group full">
+        <label class="form-label">会议全称 *</label>
+        <input class="form-input" id="newName" placeholder="例：2026年深度学习国际学术会议（ICDLA 2026）">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">会议时间（文本）</label>
+          <input class="form-input" id="newDate" placeholder="例：2026年8月3日至8日">
+        </div>
+        <div class="form-group">
+          <label class="form-label">开会日期（用于时间轴）</label>
+          <input class="form-input" id="newConfDateRaw" type="date">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">会议地点</label>
+          <input class="form-input" id="newLocation" placeholder="例：中国·桂林">
+        </div>
+        <div class="form-group">
+          <label class="form-label">往届历史</label>
+          <input class="form-input" id="newHistory" placeholder="例：SECA 2025 开会时间：2025.6.13">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">目标收入（万元）</label>
+          <input class="form-input" id="newTarget" type="number" placeholder="例：25">
+        </div>
+        <div class="form-group">
+          <label class="form-label">目标收稿量（篇）</label>
+          <input class="form-input" id="newPaperTarget" type="number" placeholder="例：70">
+        </div>
+      </div>
+
+      <div class="form-section-title">截稿时间</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">一轮截稿日期</label>
+          <input class="form-input" id="newDeadlineR1" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">二轮截稿日期</label>
+          <input class="form-input" id="newDeadlineR2" type="date">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">三轮截稿日期</label>
+          <input class="form-input" id="newDeadlineR3" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">四轮截稿日期</label>
+          <input class="form-input" id="newDeadlineR4" type="date">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">最终截稿日期</label>
+          <input class="form-input" id="newFinalDeadline" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">早鸟优惠截止日期</label>
+          <input class="form-input" id="newEarlyBird" type="date">
+        </div>
+      </div>
+
+      <div class="form-section-title">上线时间</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">一轮上线日期</label>
+          <input class="form-input" id="newOnlineR1" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">二轮上线日期</label>
+          <input class="form-input" id="newOnlineR2" type="date">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">三轮上线日期</label>
+          <input class="form-input" id="newOnlineR3" type="date">
+        </div>
+        <div class="form-group">
+        </div>
+      </div>
+
+      <div class="form-section-title">会议准备</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">会议通知发布日期</label>
+          <input class="form-input" id="newNotice" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">海报设计完成日期</label>
+          <input class="form-input" id="newPoster" type="date">
+        </div>
+      </div>
+
+      <div class="form-section-title">公告发布时间</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">一轮公告（征稿）</label>
+          <input class="form-input" id="newPubR1" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">二轮公告（出版社申请）</label>
+          <input class="form-input" id="newPubR2" type="date">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">三轮公告（主讲嘉宾阵容）</label>
+          <input class="form-input" id="newPubR3" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">四轮公告（终轮征稿）</label>
+          <input class="form-input" id="newPubR4" type="date">
+        </div>
+      </div>
+
+      <div class="form-section-title">宣传推文（4篇，标题 / 链接）</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">第1篇标题</label>
+          <input class="form-input" id="newPromo1Title" placeholder="例：学术会议精选⑤">
+        </div>
+        <div class="form-group">
+          <label class="form-label">第1篇链接</label>
+          <input class="form-input" id="newPromo1Url" type="url" placeholder="https://...">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">第2篇标题</label>
+          <input class="form-input" id="newPromo2Title" placeholder="例：学术会议精选⑥">
+        </div>
+        <div class="form-group">
+          <label class="form-label">第2篇链接</label>
+          <input class="form-input" id="newPromo2Url" type="url" placeholder="https://...">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">第3篇标题</label>
+          <input class="form-input" id="newPromo3Title" placeholder="例：AEIC学术交流中心④">
+        </div>
+        <div class="form-group">
+          <label class="form-label">第3篇链接</label>
+          <input class="form-input" id="newPromo3Url" type="url" placeholder="https://...">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">第4篇标题</label>
+          <input class="form-input" id="newPromo4Title" placeholder="">
+        </div>
+        <div class="form-group">
+          <label class="form-label">第4篇链接</label>
+          <input class="form-input" id="newPromo4Url" type="url" placeholder="https://...">
+        </div>
+      </div>
+
+      <div class="form-section-title">往届作者宣传</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">发布日期</label>
+          <input class="form-input" id="newPrevPromoDate" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">内容描述</label>
+          <input class="form-input" id="newPrevPromoNote" placeholder="例：25届宣传">
+        </div>
+      </div>
+
+      <div class="form-section-title">其他社媒平台宣传</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">会伴上线日期</label>
+          <input class="form-input" id="newHuiban" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">会伴内容描述</label>
+          <input class="form-input" id="newHuibanNote" placeholder="例：官网同步">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">小红书日期</label>
+          <input class="form-input" id="newXiaohongshu" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">小红书内容描述</label>
+          <input class="form-input" id="newXiaohongshuNote" placeholder="例：转发征稿海报">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">销售群/朋友圈首发日期</label>
+          <input class="form-input" id="newSalesCircle" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">首发内容描述</label>
+          <input class="form-input" id="newSalesCircleNote" placeholder="例：转发海报">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">海报日期</label>
+          <input class="form-input" id="newPosterDate" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">海报图片</label>
+          <input class="form-input" id="newPosterImg" type="url" placeholder="粘贴图片URL">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">知乎日期</label>
+          <input class="form-input" id="newZhihu" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">知乎内容描述</label>
+          <input class="form-input" id="newZhihuNote" placeholder="例：学术会议推荐">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">贴吧日期</label>
+          <input class="form-input" id="newTieba" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">贴吧内容描述</label>
+          <input class="form-input" id="newTiebaNote" placeholder="例：学术会议交流">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">公众号推文（自）日期</label>
+          <input class="form-input" id="newWechatArticle" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">公众号推文（自）描述</label>
+          <input class="form-input" id="newWechatArticleNote" placeholder="例：首发推文">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">公众号贴图（自）日期</label>
+          <input class="form-input" id="newWechatSticker" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">公众号贴图（自）描述</label>
+          <input class="form-input" id="newWechatStickerNote" placeholder="例：九宫格贴图">
+        </div>
+      </div>
+
+      <div class="form-section-title">参会邮件发放</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">通知报名参会（提前半个月-一个月）</label>
+          <input class="form-input" id="newEmailReg" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">参会通知（含议程，提前一周-两周）</label>
+          <input class="form-input" id="newEmailAgenda" type="date">
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-foot">
+      <button class="btn-secondary" onclick="closeAddModal()">取消</button>
+      <button class="btn-primary" onclick="createConference()">创建会议</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tooltip -->
+<div class="tooltip" id="tooltip"></div>
+
+<!-- Toast 容器 -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- 截稿提醒弹窗 -->
+<div class="modal-overlay" id="reminderModal" style="z-index:3000;">
+  <div class="modal" style="max-width:520px;" onclick="e=>e.stopPropagation()">
+    <div class="modal-header" style="background:#fef2f2;border-bottom:1px solid #fecaca;">
+      <div style="font-size:22px;">🔔</div>
+      <div class="modal-title" style="color:#dc2626;">截稿提醒</div>
+      <button class="modal-close" onclick="closeReminder()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:20px 24px;">
+      <p style="margin-bottom:14px;font-size:14px;color:#475569;">以下截稿日期为今天，请及时处理：</p>
+      <div id="reminderList" style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-secondary" onclick="dismissAllReminders()">不再提醒</button>
+      <button class="btn-primary" onclick="closeReminder()">知道了</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  Supabase 配置
+// ═══════════════════════════════════════════════
+const SB_URL = 'https://zpfmcizicdvujupjzihg.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwZm1jaXppY2R2dWp1cGp6aWhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1OTk0NzksImV4cCI6MjA5MjE3NTQ3OX0.pCcNTXjK4DkB29cbB2eVhpDdE6_EevSS9JSfeW874mw';
+
+let authToken = null;
+let refreshToken = null;
+let currentUserId = null;
+let currentEmail = null;
+let conferences = [];
+let allConferences = [];
+let currentConf = null;
+let currentView = 'card';
+let searchTerm = '';
+
+// ─── Session 持久化 ───
+function saveSession(data) {
+  authToken = data.access_token;
+  refreshToken = data.refresh_token;
+  currentUserId = data.user.id;
+  currentEmail = data.user.email;
+  localStorage.setItem('sb_session', JSON.stringify({
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+    user_id: data.user.id,
+    email: data.user.email,
+    expires_at: Date.now() + (data.expires_in || 3600) * 1000
+  }));
+}
+function clearSession() {
+  authToken = null; refreshToken = null; currentUserId = null; currentEmail = null;
+  localStorage.removeItem('sb_session');
+}
+async function restoreSession() {
+  try {
+    const raw = localStorage.getItem('sb_session');
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    // token 还有 5 分钟以上有效期，直接复用
+    if (s.expires_at - Date.now() > 5 * 60 * 1000) {
+      authToken = s.access_token;
+      refreshToken = s.refresh_token;
+      currentUserId = s.user_id;
+      currentEmail = s.email;
+      return true;
+    }
+    // 否则尝试用 refresh_token 续期
+    if (s.refresh_token) {
+      return await doRefreshToken(s.refresh_token);
+    }
+  } catch(e) { clearSession(); }
+  return false;
+}
+async function doRefreshToken(rtoken) {
+  try {
+    const res = await fetch(SB_URL + '/auth/v1/token?grant_type=refresh_token', {
+      method: 'POST',
+      headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: rtoken || refreshToken })
+    });
+    if (!res.ok) { clearSession(); return false; }
+    const data = await res.json();
+    saveSession(data);
+    return true;
+  } catch(e) { clearSession(); return false; }
+}
+
+function sbHeaders(extra = {}) {
+  const h = { 'apikey': SB_KEY, 'Content-Type': 'application/json' };
+  if (authToken) h['Authorization'] = 'Bearer ' + authToken;
+  return { ...h, ...extra };
+}
+async function sbFetch(path, opts = {}) {
+  let r = await fetch(SB_URL + path, { ...opts, headers: sbHeaders(opts.headers || {}) });
+  // token 过期时自动刷新并重试一次
+  if (r.status === 401) {
+    const ok = await doRefreshToken();
+    if (ok) {
+      r = await fetch(SB_URL + path, { ...opts, headers: sbHeaders(opts.headers || {}) });
+    } else {
+      doLogout();
+      throw new Error('登录已过期，请重新登录');
+    }
+  }
+  if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.message || e.error_description || r.statusText); }
+  // 204 No Content 或 Content-Length: 0 均返回 null，避免解析空 body 报错
+  const ct = r.headers.get('content-type') || '';
+  if (r.status === 204 || !ct.includes('json')) return null;
+  const text = await r.text();
+  return text ? JSON.parse(text) : null;
+}
+
+// ═══════════════════════════════════════════════
+//  认证
+// ═══════════════════════════════════════════════
+async function doLogin() {
+  const btn = document.getElementById('authLoginBtn');
+  const email = document.getElementById('authEmail').value.trim();
+  const pass = document.getElementById('authPass').value;
+  const errEl = document.getElementById('authErr');
+  errEl.textContent = '';
+  if (!email || !pass) { errEl.textContent = '请填写邮箱和密码'; return; }
+  btn.disabled = true; btn.textContent = '登录中…';
+  try {
+    const data = await sbFetch('/auth/v1/token?grant_type=password', {
+      method: 'POST', body: JSON.stringify({ email, password: pass })
+    });
+    saveSession(data);
+    initApp(currentEmail);
+  } catch(e) {
+    errEl.textContent = '登录失败：' + (e.message.includes('Invalid') ? '邮箱或密码错误' : e.message);
+    btn.disabled = false; btn.textContent = '登 录';
+  }
+}
+async function doRegister() {
+  const email = document.getElementById('authEmail').value.trim();
+  const pass = document.getElementById('authPass').value;
+  const errEl = document.getElementById('authErr');
+  errEl.textContent = '';
+  if (!email || !pass) { errEl.textContent = '请填写邮箱和密码'; return; }
+  if (pass.length < 6) { errEl.textContent = '密码至少6位'; return; }
+  try {
+    await sbFetch('/auth/v1/signup', { method: 'POST', body: JSON.stringify({ email, password: pass }) });
+    errEl.style.color = '#059669';
+    errEl.textContent = '注册成功！请查收验证邮件后再登录。';
+  } catch(e) {
+    errEl.style.color = '#ef4444';
+    errEl.textContent = '注册失败：' + e.message;
+  }
+}
+function doLogout() {
+  clearSession();
+  conferences = [];
+  document.getElementById('app').classList.remove('active');
+  document.getElementById('authPage').style.display = 'flex';
+}
+
+// ═══════════════════════════════════════════════
+//  初始化
+// ═══════════════════════════════════════════════
+function initApp(email) {
+  document.getElementById('authPage').style.display = 'none';
+  document.getElementById('app').classList.add('active');
+  // 更新侧边栏用户信息
+  const shortEmail = email.length > 12 ? email.substring(0, 12) + '...' : email;
+  document.getElementById('sidebarEmail').textContent = shortEmail;
+  document.getElementById('sidebarAvatar').textContent = email[0].toUpperCase();
+  loadConferences();
+}
+document.getElementById('authPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+// 页面加载时尝试恢复上次 session
+(async () => {
+  const ok = await restoreSession();
+  if (ok) initApp(currentEmail);
+})();
+
+// ═══════════════════════════════════════════════
+//  数据加载
+// ═══════════════════════════════════════════════
+async function loadConferences() {
+  document.getElementById('loadingDiv').style.display = 'flex';
+  document.getElementById('cardView').innerHTML = '';
+  document.getElementById('timelineView').innerHTML = '';
+  try {
+    const data = await sbFetch('/rest/v1/conferences?user_id=eq.' + currentUserId + '&order=conf_date_raw.asc');
+    allConferences = data || [];
+    conferences = allConferences;
+    renderAll();
+    // 检查截稿提醒
+    setTimeout(checkDeadlines, 500);
+  } catch(e) {
+    showToast('加载失败：' + e.message, 'error');
+  } finally {
+    document.getElementById('loadingDiv').style.display = 'none';
+  }
+}
+function filterConferences(list) {
+  if (!searchTerm) return list;
+  const kw = searchTerm.toLowerCase();
+  return list.filter(c => c.name.toLowerCase().includes(kw));
+}
+function onSearchChange(val) {
+  searchTerm = val.trim();
+  renderAll();
+}
+
+// ═══════════════════════════════════════════════
+//  截稿提醒
+// ═══════════════════════════════════════════════
+function checkDeadlines() {
+  const todayStr = fmtDate(today);
+  const dismissed = JSON.parse(localStorage.getItem('dismissedReminders') || '{}');
+  const reminders = [];
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = fmtDate(tomorrow);
+
+  conferences.forEach(c => {
+    // 截稿日期字段
+    const deadlineFields = [
+      { key: 'r1', label: '一轮截稿', value: c.deadline_r1 },
+      { key: 'r2', label: '二轮截稿', value: c.deadline_r2 },
+      { key: 'r3', label: '三轮截稿', value: c.deadline_r3 },
+      { key: 'r4', label: '四轮截稿', value: c.deadline_r4 },
+      { key: 'final', label: '最终截稿', value: c.final_deadline },
+    ];
+    deadlineFields.forEach(f => {
+      // 今天是截稿日
+      if (f.value && fmtDate(f.value) === todayStr) {
+        const dismissKey = `${c.id}_${f.key}_${todayStr}`;
+        if (!dismissed[dismissKey]) {
+          reminders.push({ conf: c, deadline: f, type: 'today' });
+        }
+      }
+      // 明天是截稿日（前一天提醒）
+      if (f.value && fmtDate(f.value) === tomorrowStr) {
+        const dismissKey = `${c.id}_${f.key}_tomorrow`;
+        if (!dismissed[dismissKey]) {
+          reminders.push({ conf: c, deadline: f, type: 'tomorrow' });
+        }
+      }
+    });
+  });
+
+  if (reminders.length > 0) {
+    showReminderModal(reminders);
+  }
+}
+
+function showReminderModal(reminders) {
+  const list = document.getElementById('reminderList');
+  list.innerHTML = reminders.map(r => {
+    const isToday = r.type === 'today';
+    const bg = isToday ? '#fff5f5' : '#fffbeb';
+    const border = isToday ? '#fecaca' : '#fde68a';
+    const titleColor = isToday ? '#991b1b' : '#92400e';
+    const msgColor = isToday ? '#dc2626' : '#d97706';
+    const btnColor = isToday ? '#dc2626' : '#d97706';
+    const msg = isToday
+      ? `⏰ 今天是 ${r.deadline.label} 日期`
+      : `⏰ 明天（${fmtDate(r.deadline.value)}）是 ${r.deadline.label} 日期`;
+    return `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${bg};border-radius:8px;border:1px solid ${border};">
+      <div style="flex:1;">
+        <div style="font-weight:600;font-size:14px;color:${titleColor};">${r.conf.name}</div>
+        <div style="font-size:12px;color:${msgColor};margin-top:2px;">${msg}</div>
+      </div>
+      <button onclick="openDetail('${r.conf.id}');closeReminder();" style="padding:6px 12px;background:${btnColor};color:#fff;border-radius:6px;font-size:12px;font-weight:600;border:none;cursor:pointer;">处理</button>
+    </div>`;
+  }).join('');
+  document.getElementById('reminderModal').classList.add('open');
+}
+
+function closeReminder() {
+  document.getElementById('reminderModal').classList.remove('open');
+}
+
+function dismissAllReminders() {
+  const todayStr = fmtDate(today);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = fmtDate(tomorrow);
+  const dismissed = JSON.parse(localStorage.getItem('dismissedReminders') || '{}');
+  conferences.forEach(c => {
+    const deadlineFields = [
+      { key: 'r1', val: c.deadline_r1 },
+      { key: 'r2', val: c.deadline_r2 },
+      { key: 'r3', val: c.deadline_r3 },
+      { key: 'r4', val: c.deadline_r4 },
+      { key: 'final', val: c.final_deadline },
+    ];
+    deadlineFields.forEach(f => {
+      if (f.val && fmtDate(f.val) === todayStr) {
+        dismissed[`${c.id}_${f.key}_${todayStr}`] = true;
+      }
+      if (f.val && fmtDate(f.val) === tomorrowStr) {
+        dismissed[`${c.id}_${f.key}_tomorrow`] = true;
+      }
+    });
+  });
+  localStorage.setItem('dismissedReminders', JSON.stringify(dismissed));
+  closeReminder();
+  showToast('已忽略今日提醒', 'success');
+}
+
+// ═══════════════════════════════════════════════
+//  工具函数
+// ═══════════════════════════════════════════════
+const today = new Date(); today.setHours(0,0,0,0);
+
+function parseDate(s) {
+  if (!s) return null;
+  if (s instanceof Date) return s;
+  // Excel 数字日期（天数，从1900-01-01）
+  if (typeof s === 'number') {
+    const d = new Date((s - 25569) * 86400000);
+    d.setHours(0,0,0,0);
+    return d;
+  }
+  const d = new Date(s); return isNaN(d) ? null : d;
+}
+function fmtDate(d) {
+  if (!d) return '';
+  const date = parseDate(d);
+  if (!date) return d;
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+}
+function diffDays(d) {
+  const date = parseDate(d);
+  if (!date) return null;
+  return Math.ceil((date - today) / 86400000);
+}
+function getTaskStatus(doneDate, plannedDate) {
+  if (doneDate) return 'done';
+  if (!plannedDate) return 'pending';
+  const diff = diffDays(plannedDate);
+  if (diff === null) return 'pending';
+  if (diff < 0) return 'overdue';
+  if (diff <= 7) return 'soon';
+  return 'pending';
+}
+function statusTag(s) {
+  const map = { done: ['tag-done','已完成'], overdue: ['tag-overdue','已逾期'], soon: ['tag-soon','即将到期'], pending: ['tag-pending','未开始'], na: ['tag-na','不适用'] };
+  const [cls, txt] = map[s] || ['tag-pending','未开始'];
+  return `<span class="status-tag ${cls}">${txt}</span>`;
+}
+function confStatus(conf) {
+  const tasks = getAllTasks(conf);
+  const hasOverdue = tasks.some(t => getTaskStatus(t.doneDate, t.plannedDate) === 'overdue');
+  const allDone = tasks.length > 0 && tasks.every(t => t.doneDate);
+  const confDate = parseDate(conf.conf_date_raw);
+  const isPast = confDate && confDate < today;
+  if (allDone || isPast) return 'done';
+  if (hasOverdue) return 'urgent';
+  const fd = parseDate(conf.final_deadline);
+  if (fd) {
+    const d = diffDays(fd);
+    if (d !== null && d <= 30) return 'active';
+  }
+  return 'upcoming';
+}
+function getAllTasks(conf) {
+  const p = conf.progress || {};
+  const tasks = [];
+  TASK_SECTIONS.forEach(sec => {
+    sec.items.forEach(item => {
+      if (item.sub) {
+        item.sub.forEach(sub => {
+          tasks.push({ key: sec.key + '.' + item.key + '.' + sub.key, doneDate: p[sec.key]?.[item.key]?.[sub.key]?.done, plannedDate: null });
+        });
+      } else {
+        const raw = p[sec.key]?.[item.key] || {};
+        const doneDate = raw.done || null;
+        const plannedDate = raw.date || item.getDate?.(conf) || null;
+        tasks.push({ key: sec.key + '.' + item.key, doneDate, plannedDate });
+      }
+    });
+  });
+  return tasks;
+}
+function calcProgress(conf) {
+  const tasks = getAllTasks(conf);
+  const done = tasks.filter(t => t.doneDate).length;
+  return { done, total: tasks.length, pct: tasks.length ? Math.round(done / tasks.length * 100) : 0 };
+}
+
+// ═══════════════════════════════════════════════
+//  详情面板信息字段构建
+// ═══════════════════════════════════════════════
+function buildInfoField(c, key, label, type) {
+  const val = c[key] || '';
+  const cls = !val ? 'info-value missing' : 'info-value';
+  if (type === 'textarea') {
+    return `<div class="info-field" style="grid-column:1/-1">
+      <div class="info-label">${label}</div>
+      <textarea class="${cls} textarea" data-conf-key="${key}" onblur="onConfFieldChange(this)">${val}</textarea>
+    </div>`;
+  }
+  return `<div class="info-field">
+    <div class="info-label">${label}</div>
+    <input class="${cls}" type="${type}" value="${val}" placeholder="未设置" data-conf-key="${key}" onchange="onConfFieldChange(this)">
+  </div>`;
+}
+function onConfFieldChange(el) {
+  if (!currentConf) return;
+  currentConf[el.dataset.confKey] = el.value;
+}
+
+// ═══════════════════════════════════════════════
+//  任务定义（模板）
+// ═══════════════════════════════════════════════
+const TASK_SECTIONS = [
+  {
+    key: 'deadline', label: '截稿时间', icon: '📅',
+    items: [
+      { key: 'r1', label: '一轮截稿', getDate: c => c.deadline_r1 },
+      { key: 'r2', label: '二轮截稿', getDate: c => c.deadline_r2 },
+      { key: 'r3', label: '三轮截稿', getDate: c => c.deadline_r3 },
+      { key: 'r4', label: '四轮截稿', getDate: c => c.deadline_r4 },
+      { key: 'final', label: '最终截稿', getDate: c => c.final_deadline },
+      { key: 'early_bird', label: '早鸟优惠截止', getDate: c => c.early_bird_date },
+    ]
+  },
+  {
+    key: 'prep', label: '会议准备', icon: '📢',
+    items: [
+      { key: 'notice', label: '会议通知发布' },
+      { key: 'poster', label: '海报设计完成' },
+    ]
+  },
+  {
+    key: 'online', label: '上线时间', icon: '🌐',
+    items: [
+      { key: 'r1', label: '一轮上线', getDate: c => c.online_r1 },
+      { key: 'r2', label: '二轮上线', getDate: c => c.online_r2 },
+      { key: 'r3', label: '三轮上线', getDate: c => c.online_r3 },
+    ]
+  },
+  {
+    key: 'pub', label: '公告发布时间', icon: '📣',
+    items: [
+      { key: 'r1', label: '一轮公告（征稿）', getDate: c => c.progress?.pub?.r1?.done },
+      { key: 'r2', label: '二轮公告（出版社申请）', getDate: c => c.progress?.pub?.r2?.done },
+      { key: 'r3', label: '三轮公告（主讲嘉宾阵容）', getDate: c => c.progress?.pub?.r3?.done },
+      { key: 'r4', label: '四轮公告（终轮征稿）', getDate: c => c.progress?.pub?.r4?.done },
+    ]
+  },
+  {
+    key: 'promo', label: '宣传推文', icon: '📝',
+    items: [
+      { key: 'promo1', label: '第1篇推文', hasLink: true, getTitle: c => c.progress?.promo?.promo1?.title },
+      { key: 'promo2', label: '第2篇推文', hasLink: true, getTitle: c => c.progress?.promo?.promo2?.title },
+      { key: 'promo3', label: '第3篇推文', hasLink: true, getTitle: c => c.progress?.promo?.promo3?.title },
+      { key: 'promo4', label: '第4篇推文', hasLink: true, getTitle: c => c.progress?.promo?.promo4?.title },
+    ]
+  },
+  {
+    key: 'prev_promo', label: '往届作者宣传', icon: '👥',
+    items: [
+      { key: 'prev1', label: '往届宣传发布', getNote: c => c.progress?.prev_promo?.prev1?.note, hasNote: true },
+    ]
+  },
+  {
+    key: 'social', label: '其他社媒平台', icon: '📱',
+    items: [
+      { key: 'huiban', label: '会伴上线', hasNote: true },
+      { key: 'xiaohongshu', label: '小红书', hasNote: true },
+      { key: 'sales_circle', label: '销售群/朋友圈首发', hasNote: true },
+      { key: 'poster_date', label: '海报日期', hasImage: true },
+      { key: 'wechat_article', label: '公众号推文（自）', hasNote: true },
+      { key: 'wechat_sticker', label: '公众号贴图（自）', hasNote: true },
+      { key: 'zhihu', label: '知乎', hasNote: true },
+      { key: 'tieba', label: '贴吧', hasNote: true },
+    ]
+  },
+  {
+    key: 'email', label: '参会邮件发放', icon: '📧',
+    items: [
+      { key: 'registration', label: '通知报名参会邮件' },
+      { key: 'agenda', label: '参会通知（含议程&参会方式）' },
+    ]
+  },
+  {
+    key: 'materials', label: '开会资料准备', icon: '📦',
+    items: [
+      { key: 'info_collect', label: '参会信息收集表' },
+      { key: 'group', label: '组建参会群' },
+      { key: 'qrcode', label: '签到&报名二维码' },
+      { key: 'cert', label: '证书制作（参会/口头/主讲）' },
+      { key: 'conf_notice', label: '会议通知文件' },
+      { key: 'sign_sheet', label: '签到表' },
+      { key: 'oral_test', label: '线上口头测试' },
+    ]
+  },
+];
+
+// ═══════════════════════════════════════════════
+//  渲染
+// ═══════════════════════════════════════════════
+let statusFilter = 'all'; // 当前状态筛选
+
+function filterByStatus(status) {
+  statusFilter = status;
+  const titleMap = { all:'全部会议', active:'进行中', upcoming:'即将截稿', urgent:'截稿紧急', done:'已完成', thismonth:'本月开会' };
+  document.getElementById('pageTitle').textContent = titleMap[status] || '全部会议';
+  // 统计卡片激活态
+  ['stat-all','stat-active','stat-upcoming','stat-urgent','stat-done','stat-this-month'].forEach(id => {
+    document.getElementById(id)?.classList.remove('active');
+  });
+  const statMap = { all:'stat-all', active:'stat-active', upcoming:'stat-upcoming', urgent:'stat-urgent', done:'stat-done', thismonth:'stat-this-month' };
+  document.getElementById(statMap[status] || 'stat-all')?.classList.add('active');
+  renderAll();
+}
+
+function renderAll() {
+  updateStats();
+  // 根据statusFilter过滤显示的列表
+  let filtered = allConferences.filter(c => {
+    if (searchTerm) {
+      if (!c.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+    }
+    if (statusFilter === 'all') return true;
+    const s = confStatus(c);
+    if (statusFilter === 'active') return s !== 'done';
+    if (statusFilter === 'done') return s === 'done';
+    if (statusFilter === 'urgent') return s === 'urgent';
+    if (statusFilter === 'upcoming') return s === 'upcoming';
+    if (statusFilter === 'thismonth') {
+      if (!c.conf_date_raw) return false;
+      const d = new Date(c.conf_date_raw);
+      const now = new Date();
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    }
+    return true;
+  });
+  conferences = filtered;
+  const total = allConferences.length;
+  const shown = filtered.length;
+  document.getElementById('confCount').textContent = shown;
+  document.getElementById('pageBadge').textContent = (searchTerm || statusFilter !== 'all') ? `${shown}/${total} 个会议` : `${shown} 个会议`;
+  if (currentView === 'card') renderCards();
+  else renderTimeline();
+}
+
+function updateStats() {
+  const all = allConferences;
+  const now = new Date();
+  let active=0, done=0, urgent=0, upcoming=0, thisMonth=0;
+  all.forEach(c => {
+    const s = confStatus(c);
+    if (s === 'done') done++;
+    else active++;
+    if (s === 'urgent') urgent++;
+    if (s === 'upcoming') upcoming++;
+    if (c.conf_date_raw) {
+      const d = new Date(c.conf_date_raw);
+      if (d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()) thisMonth++;
+    }
+  });
+  document.getElementById('statTotal').textContent = all.length;
+  document.getElementById('statActive').textContent = active;
+  document.getElementById('statDone').textContent = done;
+  document.getElementById('statUrgent').textContent = urgent;
+  document.getElementById('statUpcoming').textContent = upcoming;
+  document.getElementById('statThisMonth').textContent = thisMonth;
+}
+
+function renderCards() {
+  const wrap = document.getElementById('cardView');
+  wrap.innerHTML = '';
+  wrap.classList.add('active');
+  document.getElementById('timelineView').classList.remove('active');
+  if (!conferences.length) {
+    wrap.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="empty-icon">📋</div><div class="empty-text">暂无会议</div><div class="empty-sub">点击「新建会议」添加第一个会议</div></div>';
+    return;
+  }
+  conferences.forEach(c => wrap.appendChild(buildCard(c)));
+}
+
+function buildCard(c) {
+  const status = confStatus(c);
+  const { done, total, pct } = calcProgress(c);
+  const badgeMap = { active: ['badge-active','进行中'], upcoming: ['badge-upcoming','待启动'], done: ['badge-done','已完成'], urgent: ['badge-urgent','有逾期'] };
+  const [badgeCls, badgeTxt] = badgeMap[status] || ['badge-upcoming','待启动'];
+  
+  // 卡片只显示这4个截稿任务（有日期的才显示）
+  const p = c.progress || {};
+  const deadlineItems = [
+    { key: 'r1', label: '一轮截稿', getDate: c => c.deadline_r1 },
+    { key: 'r2', label: '二轮截稿', getDate: c => c.deadline_r2 },
+    { key: 'final', label: '最终截稿', getDate: c => c.final_deadline },
+    { key: 'early_bird', label: '早鸟截止', getDate: c => c.early_bird_date },
+  ];
+  const cardTasks = deadlineItems
+    .map(item => {
+      const done_date = p.deadline?.[item.key]?.done || '';
+      const planned = item.getDate(c);
+      if (!planned) return null; // 无日期不显示
+      const diff = diffDays(planned);
+      const s = done_date ? 'done' : (diff !== null && diff <= 0 ? 'done' : diff !== null && diff < 0 ? 'overdue' : diff !== null && diff <= 7 ? 'soon' : 'pending');
+      return { name: item.label, date: done_date || planned, status: s };
+    })
+    .filter(Boolean);
+  const taskRows = cardTasks.map(t => {
+    const dotMap = { done: 'dot-done', overdue: 'dot-overdue', soon: 'dot-soon', pending: 'dot-pending' };
+    return `<div class="task-row">
+      <div class="task-dot ${dotMap[t.status]||'dot-pending'}"></div>
+      <div class="task-name">${t.name}</div>
+      <div class="task-date">${t.date ? fmtDate(t.date) : ''}</div>
+    </div>`;
+  }).join('');
+
+  const div = document.createElement('div');
+  div.className = 'conf-card';
+  div.innerHTML = `
+    <div class="card-top">
+      <span class="card-badge ${badgeCls}">${badgeTxt}</span>
+      <div class="card-name">${c.name}</div>
+      <div class="card-meta">
+        ${c.conf_date ? `<span class="card-meta-item">📅 ${c.conf_date}</span>` : ''}
+        ${c.location ? `<span class="card-meta-item">📍 ${c.location}</span>` : ''}
+        ${c.paper_target ? `<span class="card-meta-item">📄 目标${c.paper_target}篇</span>` : ''}
+      </div>
+    </div>
+    <div class="card-divider"></div>
+    <div class="card-progress">
+      <div class="progress-label">
+        <span class="progress-text">任务完成度 (${done}/${total})</span>
+        <span class="progress-pct">${pct}%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+    </div>
+    ${taskRows ? `<div class="card-tasks">${taskRows}</div>` : ''}
+    <div class="card-foot">
+      <button class="card-action primary" onclick="openDetail('${c.id}')">查看详情 →</button>
+      <button class="card-action ghost" onclick="deleteConf('${c.id}')">删除</button>
+    </div>`;
+  return div;
+}
+
+// ─── 时间轴视图 ───
+function renderTimeline() {
+  const wrap = document.getElementById('timelineView');
+  wrap.innerHTML = '';
+  wrap.classList.add('active');
+  document.getElementById('cardView').classList.remove('active');
+  if (!conferences.length) {
+    wrap.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">暂无会议</div></div>';
+    return;
+  }
+
+  // 计算时间范围
+  let minDate = new Date(today); minDate.setDate(1);
+  let maxDate = new Date(today); maxDate.setMonth(maxDate.getMonth() + 8); maxDate.setDate(1);
+  conferences.forEach(c => {
+    [c.deadline_r1, c.deadline_r2, c.final_deadline, c.conf_date_raw].forEach(d => {
+      const dt = parseDate(d);
+      if (dt) { if (dt < minDate) minDate = new Date(dt); if (dt > maxDate) maxDate = new Date(dt); }
+    });
+  });
+  minDate.setDate(1);
+  maxDate.setMonth(maxDate.getMonth() + 2); maxDate.setDate(1);
+  const totalMs = maxDate - minDate;
+
+  function pct(d) {
+    const dt = parseDate(d);
+    if (!dt) return null;
+    return Math.max(0, Math.min(100, (dt - minDate) / totalMs * 100));
+  }
+
+  // 月份标签
+  const months = [];
+  let cur = new Date(minDate);
+  while (cur <= maxDate) {
+    months.push(new Date(cur));
+    cur.setMonth(cur.getMonth() + 1);
+  }
+
+  const header = document.createElement('div');
+  header.className = 'timeline-header';
+  header.innerHTML = `<div class="tl-head-left">会议</div><div class="tl-head-right"><div class="month-labels">${
+    months.map((m, i) => {
+      const nextMonth = new Date(m);
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+      const w = (nextMonth - m) / totalMs * 100;
+      return `<div class="month-cell" style="min-width:${w}%;flex:${w} 0 0">${m.getFullYear()}/${m.getMonth()+1}</div>`;
+    }).join('')
+  }</div></div>`;
+  wrap.appendChild(header);
+
+  const body = document.createElement('div');
+  body.className = 'timeline-body';
+  body.style.position = 'relative';
+  const todayPct = pct(today);
+
+  // 只渲染一次今天线（固定在最上方）
+  if (todayPct !== null) {
+    const todayLine = document.createElement('div');
+    todayLine.style.cssText = `position:absolute;top:0;bottom:0;width:1.5px;background:var(--danger);opacity:.7;z-index:10;left:${todayPct}%`;
+    body.appendChild(todayLine);
+    const todayLabel = document.createElement('div');
+    todayLabel.style.cssText = `position:absolute;top:2px;background:var(--danger);color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:3px;transform:translateX(-50%);white-space:nowrap;z-index:11;left:${todayPct}%`;
+    todayLabel.textContent = '今天';
+    body.appendChild(todayLabel);
+  }
+
+  conferences.forEach(c => {
+    const events = [];
+    // 截稿时间
+    [
+      { d: c.deadline_r1, label: '一轮截稿', cls: 'ev-deadline' },
+      { d: c.deadline_r2, label: '二轮截稿', cls: 'ev-deadline' },
+      { d: c.deadline_r3, label: '三轮截稿', cls: 'ev-deadline' },
+      { d: c.deadline_r4, label: '四轮截稿', cls: 'ev-deadline' },
+      { d: c.final_deadline, label: '最终截稿', cls: 'ev-deadline' },
+      { d: c.conf_date_raw, label: '开会', cls: 'ev-conf' },
+      { d: c.early_bird_date, label: '早鸟截止', cls: 'ev-other' },
+    ].forEach(e => {
+      const p = pct(e.d);
+      if (p !== null) events.push({ ...e, pct: p });
+    });
+
+    // 简短名称（截断过长的）
+    const shortName = c.name.replace(/（[^）]+）/g, '').replace(/\([^)]+\)/g, '').replace(/国际学术会议|国际会议/g, '').trim();
+    const displayName = shortName.length > 12 ? shortName.substring(0, 12) + '…' : shortName;
+
+    const row = document.createElement('div');
+    row.className = 'tl-row';
+    row.innerHTML = `
+      <div class="tl-name">
+        <div class="tl-name-main" title="${c.name}">${displayName}</div>
+        <div class="tl-name-sub">${c.conf_date || ''}</div>
+      </div>
+      <div class="tl-bars">
+        ${events.map((e, i) => {
+          const offset = events.filter((ev, j) => j < i && Math.abs(ev.pct - e.pct) < 5).length;
+          return `<div class="event-bar ${e.cls}" style="left:${e.pct}%;top:${offset * 22 + 8}px;transform:translateX(-50%);" 
+            onmouseenter="showTip(event,'${e.label}: ${fmtDate(e.d)}')" onmouseleave="hideTip()"
+            onclick="openDetail('${c.id}')">${e.label}</div>`;
+        }).join('')}
+      </div>`;
+    body.appendChild(row);
+  });
+  wrap.appendChild(body);
+}
+
+// ─── 视图切换 ───
+function switchView(v) {
+  currentView = v;
+  document.getElementById('btnCard').classList.toggle('active', v === 'card');
+  document.getElementById('btnTimeline').classList.toggle('active', v === 'timeline');
+  // 同步顶部栏视图按钮激活态
+  document.getElementById('btnCard')?.classList.toggle('active', v === 'card');
+  document.getElementById('btnTimeline')?.classList.toggle('active', v === 'timeline');
+  if (v === 'card') renderCards();
+  else renderTimeline();
+}
+
+// ═══════════════════════════════════════════════
+//  详情面板
+// ═══════════════════════════════════════════════
+function openDetail(id) {
+  currentConf = conferences.find(c => c.id === id);
+  if (!currentConf) return;
+  const c = currentConf;
+  const status = confStatus(c);
+  const badgeMap = { active: ['badge-active','进行中'], upcoming: ['badge-upcoming','待启动'], done: ['badge-done','已完成'], urgent: ['badge-urgent','有逾期'] };
+  const [badgeCls, badgeTxt] = badgeMap[status] || ['badge-upcoming','待启动'];
+
+  document.getElementById('panelBadge').className = 'panel-badge ' + badgeCls;
+  document.getElementById('panelBadge').textContent = badgeTxt;
+  document.getElementById('panelName').textContent = c.name;
+  document.getElementById('panelMeta').innerHTML = [
+    c.conf_date ? `📅 ${c.conf_date}` : '',
+    c.location ? `📍 ${c.location}` : '',
+    c.target_income ? `💰 目标 ${c.target_income}万元` : '',
+    c.paper_target ? `📄 目标 ${c.paper_target} 篇` : '',
+  ].filter(Boolean).map(t => `<span>${t}</span>`).join('');
+
+  const body = document.getElementById('panelBody');
+  body.innerHTML = '';
+
+  // 基本信息区（可编辑）
+  const infoSec = document.createElement('div');
+  infoSec.className = 'section';
+  infoSec.innerHTML = `<div class="section-title">🏷️ 基本信息</div>
+    <div class="info-grid">
+      ${buildInfoField(c, 'conf_date', '会议时间', 'text')}
+      ${buildInfoField(c, 'conf_date_raw', '开会日期', 'date')}
+      ${buildInfoField(c, 'location', '会议地点', 'text')}
+      ${buildInfoField(c, 'target_income', '目标收入（万元）', 'number')}
+      ${buildInfoField(c, 'paper_target', '目标收稿量（篇）', 'number')}
+      ${buildInfoField(c, 'history', '往届历史', 'textarea')}
+    </div>`;
+  body.appendChild(infoSec);
+
+  // 截稿时间区（可编辑）
+  const deadlineSec = document.createElement('div');
+  deadlineSec.className = 'section';
+  deadlineSec.innerHTML = `<div class="section-title">📅 截稿时间（点击日期可编辑）</div>
+    <div class="info-grid">
+      ${buildInfoField(c, 'deadline_r1', '一轮截稿', 'date')}
+      ${buildInfoField(c, 'deadline_r2', '二轮截稿', 'date')}
+      ${buildInfoField(c, 'deadline_r3', '三轮截稿', 'date')}
+      ${buildInfoField(c, 'deadline_r4', '四轮截稿', 'date')}
+      ${buildInfoField(c, 'final_deadline', '最终截稿', 'date')}
+      ${buildInfoField(c, 'early_bird_date', '早鸟优惠截止', 'date')}
+    </div>`;
+  body.appendChild(deadlineSec);
+
+  // 上线时间区（可编辑）
+  const onlineSec = document.createElement('div');
+  onlineSec.className = 'section';
+  onlineSec.innerHTML = `<div class="section-title">🌐 上线时间</div>
+    <div class="info-grid">
+      ${buildInfoField(c, 'online_r1', '一轮上线', 'date')}
+      ${buildInfoField(c, 'online_r2', '二轮上线', 'date')}
+      ${buildInfoField(c, 'online_r3', '三轮上线', 'date')}
+    </div>`;
+  body.appendChild(onlineSec);
+
+  // 各任务分区
+  const p = c.progress || {};
+  TASK_SECTIONS.forEach(sec => {
+    const secDiv = document.createElement('div');
+    secDiv.className = 'section';
+    secDiv.innerHTML = `<div class="section-title">${sec.icon} ${sec.label}</div>`;
+    const grid = document.createElement('div');
+    grid.className = 'task-grid';
+
+    sec.items.forEach(item => {
+      const itemData = p[sec.key]?.[item.key] || {};
+      const plannedDate = itemData.date || item.getDate?.(c) || '';
+      const doneDate = itemData.done || '';
+      const note = itemData.note || item.getNote?.(c) || '';
+      const link = itemData.link || itemData.url || '';
+      const title = itemData.title || item.getTitle?.(c) || '';
+      const taskStatus = getTaskStatus(doneDate, plannedDate);
+
+      const el = document.createElement('div');
+      el.className = 'task-item';
+      el.dataset.secKey = sec.key;
+      el.dataset.itemKey = item.key;
+
+      const checkCls = doneDate ? 'checked' : (taskStatus === 'overdue' ? 'overdue' : '');
+      const checkIcon = doneDate ? '✓' : (taskStatus === 'overdue' ? '!' : '');
+
+      // 标题行（去掉note预览，只保留编辑框）
+      let infoHtml = `<div class="task-item-name">${item.label}${title ? ` <span style="color:#94a3b8;font-weight:400">— ${title}</span>` : ''}</div>`;
+
+      // 图片（海报等）- 只显示编辑框，去掉预览
+      let imgHtml = '';
+      if (item.hasImage) {
+        imgHtml = `<input class="link-input" type="url" value="${link || ''}" placeholder="粘贴图片URL" data-sec="${sec.key}" data-item="${item.key}" data-field="link" onblur="onLinkChange(this)" style="width:180px;margin-right:6px;">`;
+      }
+
+      // 链接（推文）
+      let linkHtml = '';
+      if (item.hasLink) {
+        linkHtml = link
+          ? `<a href="${link}" target="_blank" class="link-input" style="color:var(--brand);text-decoration:underline;width:auto;padding:5px 8px;" data-sec="${sec.key}" data-item="${item.key}" data-field="link">🔗 查看链接</a>`
+          : `<input class="link-input" type="url" value="${link}" placeholder="粘贴链接" data-sec="${sec.key}" data-item="${item.key}" data-field="link" onblur="onLinkChange(this)">`;
+      }
+      // 内容描述（销售群等）- 显示标签和编辑框
+      let noteHtml = '';
+      if (item.hasNote) {
+        noteHtml = `<span style="font-size:11px;color:var(--text-muted);margin-right:4px;">描述:</span><input class="link-input" type="text" value="${note || ''}" placeholder="描述内容" data-sec="${sec.key}" data-item="${item.key}" data-field="note" onblur="onNoteChange(this)" style="width:110px;margin-right:6px;">`;
+      }
+
+      el.innerHTML = `
+        <div class="task-check ${checkCls}" onclick="toggleTask(this)" data-sec="${sec.key}" data-item="${item.key}">${checkIcon}</div>
+        <div class="task-info">
+          ${infoHtml}
+        </div>
+        <div class="task-status">
+          ${imgHtml}
+          ${noteHtml}
+          ${linkHtml}
+          <input class="date-input" type="date" value="${doneDate ? fmtDate(doneDate) : ''}"
+            placeholder="完成日期" data-sec="${sec.key}" data-item="${item.key}" data-field="done"
+            onchange="onDateChange(this)">
+          ${statusTag(taskStatus)}
+        </div>`;
+
+      if (item.sub) {
+        const subWrap = document.createElement('div');
+        subWrap.className = 'sub-items';
+        item.sub.forEach(sub => {
+          const subData = p[sec.key]?.[item.key]?.[sub.key] || {};
+          const subDone = subData.done || '';
+          const subEl = document.createElement('div');
+          subEl.className = 'sub-item';
+          subEl.innerHTML = `
+            <div class="sub-check ${subDone ? 'checked' : ''}" onclick="toggleSubTask(this)" 
+              data-sec="${sec.key}" data-item="${item.key}" data-sub="${sub.key}">${subDone ? '✓' : ''}</div>
+            <span class="sub-name">${sub.label}</span>
+            <input class="sub-date" type="date" value="${subDone ? fmtDate(subDone) : ''}" 
+              data-sec="${sec.key}" data-item="${item.key}" data-sub="${sub.key}" onchange="onSubDateChange(this)">`;
+          subWrap.appendChild(subEl);
+        });
+        el.appendChild(subWrap);
+      }
+      grid.appendChild(el);
+    });
+    secDiv.appendChild(grid);
+    body.appendChild(secDiv);
+  });
+
+  // 备注区
+  const noteDiv = document.createElement('div');
+  noteDiv.className = 'section';
+  noteDiv.innerHTML = `<div class="section-title">💬 备注</div>
+    <textarea class="form-textarea" id="confNote" style="width:100%" rows="3" placeholder="记录任何备注信息…">${c.note || ''}</textarea>`;
+  body.appendChild(noteDiv);
+
+  document.getElementById('detailOverlay').classList.add('open');
+}
+
+function closeDetailPanel() {
+  document.getElementById('detailOverlay').classList.remove('open');
+  currentConf = null;
+}
+function closeDetail(e) {
+  if (e.target === document.getElementById('detailOverlay')) closeDetailPanel();
+}
+
+// ─── 任务状态切换 ───
+function toggleTask(el) {
+  const secKey = el.dataset.sec, itemKey = el.dataset.item;
+  const dateInput = el.closest('.task-item').querySelector(`input[data-field="done"]`);
+  if (el.classList.contains('checked')) {
+    el.classList.remove('checked'); el.textContent = '';
+    if (dateInput) dateInput.value = '';
+    setProgress(secKey, itemKey, 'done', '');
+  } else {
+    const today_str = fmtDate(today);
+    el.classList.add('checked'); el.textContent = '✓'; el.classList.remove('overdue');
+    if (dateInput) dateInput.value = today_str;
+    setProgress(secKey, itemKey, 'done', today_str);
+  }
+  updateTaskStatus(el.closest('.task-item'), secKey, itemKey);
+}
+function toggleSubTask(el) {
+  const secKey = el.dataset.sec, itemKey = el.dataset.item, subKey = el.dataset.sub;
+  const dateInput = el.closest('.sub-item').querySelector('input[type="date"]');
+  if (el.classList.contains('checked')) {
+    el.classList.remove('checked'); el.textContent = '';
+    if (dateInput) dateInput.value = '';
+    setSubProgress(secKey, itemKey, subKey, '');
+  } else {
+    const today_str = fmtDate(today);
+    el.classList.add('checked'); el.textContent = '✓';
+    if (dateInput) dateInput.value = today_str;
+    setSubProgress(secKey, itemKey, subKey, today_str);
+  }
+}
+function onDateChange(input) {
+  const { sec, item, field } = input.dataset;
+  setProgress(sec, item, field, input.value);
+  const taskItem = input.closest('.task-item');
+  if (taskItem) updateTaskStatus(taskItem, sec, item);
+}
+function onLinkChange(input) {
+  const { sec, item, field } = input.dataset;
+  setProgress(sec, item, field, input.value);
+}
+function onNoteChange(input) {
+  const { sec, item, field } = input.dataset;
+  setProgress(sec, item, field, input.value);
+}
+function onSubDateChange(input) {
+  const { sec, item, sub } = input.dataset;
+  setSubProgress(sec, item, sub, input.value);
+  if (input.value) { const check = input.closest('.sub-item').querySelector('.sub-check'); check.classList.add('checked'); check.textContent = '✓'; }
+}
+function updateTaskStatus(taskItem, secKey, itemKey) {
+  const c = currentConf;
+  if (!c) return;
+  const p = c.progress || {};
+  const doneDate = p[secKey]?.[itemKey]?.done;
+  const item = TASK_SECTIONS.flatMap(s => s.items).find(i => i.key === itemKey);
+  const planned = p[secKey]?.[itemKey]?.date || item?.getDate?.(c);
+  const s = getTaskStatus(doneDate, planned);
+  const tagEl = taskItem.querySelector('.status-tag');
+  if (tagEl) tagEl.outerHTML = statusTag(s);
+  const check = taskItem.querySelector('.task-check');
+  if (check) {
+    check.classList.toggle('checked', !!doneDate);
+    check.classList.toggle('overdue', !doneDate && s === 'overdue');
+    check.textContent = doneDate ? '✓' : (s === 'overdue' ? '!' : '');
+  }
+}
+function setProgress(sec, item, field, val) {
+  if (!currentConf) return;
+  if (!currentConf.progress) currentConf.progress = {};
+  if (!currentConf.progress[sec]) currentConf.progress[sec] = {};
+  if (!currentConf.progress[sec][item]) currentConf.progress[sec][item] = {};
+  currentConf.progress[sec][item][field] = val;
+}
+function setSubProgress(sec, item, sub, val) {
+  if (!currentConf) return;
+  if (!currentConf.progress) currentConf.progress = {};
+  if (!currentConf.progress[sec]) currentConf.progress[sec] = {};
+  if (!currentConf.progress[sec][item]) currentConf.progress[sec][item] = {};
+  if (!currentConf.progress[sec][item][sub]) currentConf.progress[sec][item][sub] = {};
+  currentConf.progress[sec][item][sub].done = val;
+}
+
+// ─── 保存 ───
+async function saveProgress() {
+  if (!currentConf) return;
+  const btn = document.querySelector('.save-btn');
+  btn.disabled = true; btn.textContent = '保存中…';
+  const noteVal = document.getElementById('confNote')?.value || '';
+  currentConf.note = noteVal;
+  // 收集所有基本信息字段
+  const infoFields = ['conf_date','conf_date_raw','location','target_income','paper_target',
+    'history','deadline_r1','deadline_r2','deadline_r3','deadline_r4',
+    'final_deadline','early_bird_date','online_r1','online_r2','online_r3'];
+  const patchData = { progress: currentConf.progress, note: noteVal, updated_at: new Date().toISOString() };
+  infoFields.forEach(f => { if (currentConf[f] !== undefined) patchData[f] = currentConf[f]; });
+  try {
+    await sbFetch(`/rest/v1/conferences?id=eq.${currentConf.id}`, {
+      method: 'PATCH',
+      headers: { 'Prefer': 'return=minimal' },
+      body: JSON.stringify(patchData)
+    });
+    // 更新本地数据
+    const idx = conferences.findIndex(c => c.id === currentConf.id);
+    if (idx !== -1) conferences[idx] = { ...currentConf };
+    showToast('进度已保存 ✓', 'success');
+    renderAll();
+  } catch(e) {
+    showToast('保存失败：' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 保存进度';
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  新建会议
+// ═══════════════════════════════════════════════
+function openAddModal() {
+  document.getElementById('addModal').classList.add('open');
+  const ids = [
+    'newName','newDate','newLocation','newHistory','newTarget','newPaperTarget',
+    'newConfDateRaw','newDeadlineR1','newDeadlineR2','newDeadlineR3','newDeadlineR4',
+    'newFinalDeadline','newEarlyBird','newOnlineR1','newOnlineR2','newOnlineR3',
+    'newNotice','newPoster',
+    'newPubR1','newPubR2','newPubR3','newPubR4',
+    'newPromo1Title','newPromo1Url','newPromo2Title','newPromo2Url',
+    'newPromo3Title','newPromo3Url','newPromo4Title','newPromo4Url',
+    'newPrevPromoDate','newPrevPromoNote',
+    'newHuiban','newHuibanNote','newXiaohongshu','newXiaohongshuNote',
+    'newSalesCircle','newSalesCircleNote',
+    'newPosterDate','newPosterImg',
+    'newZhihu','newZhihuNote','newTieba','newTiebaNote',
+    'newWechatArticle','newWechatArticleNote',
+    'newWechatSticker','newWechatStickerNote',
+    'newEmailReg','newEmailAgenda'
+  ];
+  ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+}
+function closeAddModal(e) {
+  if (!e || e.target === document.getElementById('addModal')) document.getElementById('addModal').classList.remove('open');
+}
+async function createConference() {
+  const name = document.getElementById('newName').value.trim();
+  if (!name) { showToast('请填写会议名称', 'error'); return; }
+
+  function v(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
+  function d(id) {
+    const el = document.getElementById(id);
+    if (!el) return null;
+    const val = el.value.trim();
+    return val === '' ? null : val;
+  }
+
+  // 收集所有初始进度到 progress JSONB
+  const progress = {
+    prep: {
+      notice:  { date: d('newNotice'), done: d('newNotice') },
+      poster:  { date: d('newPoster'), done: d('newPoster') },
+    },
+    pub: {
+      r1: { date: d('newPubR1'), done: d('newPubR1') },
+      r2: { date: d('newPubR2'), done: d('newPubR2') },
+      r3: { date: d('newPubR3'), done: d('newPubR3') },
+      r4: { date: d('newPubR4'), done: d('newPubR4') },
+    },
+    promo: {
+      promo1: { title: d('newPromo1Title'), link: v('newPromo1Url'), done: d('newPromo1Url') },
+      promo2: { title: d('newPromo2Title'), link: v('newPromo2Url'), done: d('newPromo2Url') },
+      promo3: { title: d('newPromo3Title'), link: v('newPromo3Url'), done: d('newPromo3Url') },
+      promo4: { title: d('newPromo4Title'), link: v('newPromo4Url'), done: d('newPromo4Url') },
+    },
+    prev_promo: {
+      prev1: { note: d('newPrevPromoNote'), done: d('newPrevPromoDate') },
+    },
+    social: {
+      huiban:      { done: d('newHuiban'), note: d('newHuibanNote') },
+      xiaohongshu: { done: d('newXiaohongshu'), note: d('newXiaohongshuNote') },
+      sales_circle:{ done: d('newSalesCircle'), note: d('newSalesCircleNote') },
+      poster_date: { done: d('newPosterDate'), link: v('newPosterImg') },
+      zhihu:       { done: d('newZhihu'), note: d('newZhihuNote') },
+      tieba:       { done: d('newTieba'), note: d('newTiebaNote') },
+      wechat_article: { done: d('newWechatArticle'), note: d('newWechatArticleNote') },
+      wechat_sticker:  { done: d('newWechatSticker'), note: d('newWechatStickerNote') },
+    },
+    email: {
+      registration: { done: d('newEmailReg') },
+      agenda:       { done: d('newEmailAgenda') },
+    },
+  };
+
+  const data = {
+    id: 'conf_' + Date.now(),
+    user_id: currentUserId,
+    name,
+    conf_date: d('newDate'),
+    conf_date_raw: d('newConfDateRaw'),
+    location: v('newLocation') || null,
+    history: v('newHistory') || null,
+    target_income: d('newTarget'),
+    paper_target: d('newPaperTarget'),
+    deadline_r1: d('newDeadlineR1'),
+    deadline_r2: d('newDeadlineR2'),
+    deadline_r3: d('newDeadlineR3'),
+    deadline_r4: d('newDeadlineR4'),
+    final_deadline: d('newFinalDeadline'),
+    early_bird_date: d('newEarlyBird'),
+    online_r1: d('newOnlineR1'),
+    online_r2: d('newOnlineR2'),
+    online_r3: d('newOnlineR3'),
+    progress,
+    note: '',
+  };
+
+  // ─── 彻底清理所有空值：空字符串→null（递归处理所有嵌套对象和数组）───
+  function cleanNullDeep(obj) {
+    if (obj === null || typeof obj !== 'object' || typeof obj === 'function') return;
+    if (Array.isArray(obj)) {
+      obj.forEach(item => { if (item && typeof item === 'object') cleanNullDeep(item); });
+      return;
+    }
+    for (const key of Object.keys(obj)) {
+      if (obj[key] === '') obj[key] = null;
+      else if (obj[key] && typeof obj[key] === 'object') cleanNullDeep(obj[key]);
+    }
+  }
+  cleanNullDeep(data); // 一次递归搞定所有层级
+
+  console.log('[DEBUG] 创建会议数据:', JSON.stringify(data, null, 2));
+  try {
+    await sbFetch('/rest/v1/conferences', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=minimal' },
+      body: JSON.stringify(data)
+    });
+    closeAddModal();
+    showToast('会议创建成功 ✓', 'success');
+    await loadConferences();
+  } catch(e) {
+    console.error('创建失败详情:', e);
+    const detail = e.message || '';
+    // 尝试从响应中提取更多信息
+    showToast('创建失败：' + detail.substring(0, 60), 'error');
+  }
+}
+
+// ─── 删除会议 ───
+async function deleteConf(id) {
+  const c = conferences.find(x => x.id === id);
+  if (!c) return;
+  if (!confirm(`确认删除会议「${c.name}」？\n此操作不可恢复，所有进度数据将清空。`)) return;
+  try {
+    await sbFetch(`/rest/v1/conferences?id=eq.${id}`, { method: 'DELETE' });
+    showToast('已删除', 'success');
+    await loadConferences();
+  } catch(e) {
+    showToast('删除失败：' + e.message, 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  Tooltip & Toast
+// ═══════════════════════════════════════════════
+const tipEl = document.getElementById('tooltip');
+function showTip(e, text) {
+  tipEl.textContent = text;
+  tipEl.classList.add('show');
+  moveTip(e);
+}
+function moveTip(e) { tipEl.style.left = (e.clientX + 12) + 'px'; tipEl.style.top = (e.clientY - 28) + 'px'; }
+function hideTip() { tipEl.classList.remove('show'); }
+document.addEventListener('mousemove', e => { if (tipEl.classList.contains('show')) moveTip(e); });
+
+let toastTimer = null;
+function showToast(msg, type = 'success') {
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `${type === 'success' ? '✅' : '❌'} ${msg}`;
+  wrap.appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, 2500);
+}
+</script>
+</body>
+</html>
