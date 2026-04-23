@@ -1657,12 +1657,12 @@ async function doExportCSV() {
 function doExportCustomerCSV() {
   const list = custLoad();
   if (!list.length) { custToast('暂无客户数据可导出'); return; }
-  const sep = '\t';
+  const escapeCSV = v => { const x=String(v||''); return x.includes(',')||x.includes('"')||x.includes('\n')?'"'+x.replace(/"/g,'""')+'"':x; };
   const ST = { contacted:'已投稿', signed:'已缴费', completed:'已结项' };
   const TY = { conference:'会议客户', journal:'期刊客户' };
-  let s = ['序号','类型','订单号','姓名','电话','邮箱','工作单位','职称','研究方向','关联会议/期刊','状态','跟进记录数','创建时间','更新时间','备注'].join(sep)+'\n';
+  let s = ['序号','类型','订单号','姓名','电话','邮箱','工作单位','职称','研究方向','关联会议/期刊','状态','跟进记录数','创建时间','更新时间','备注'].map(escapeCSV).join(',')+'\n';
   list.forEach((c,i) => {
-    s += [i+1,TY[c.type]||'',c.orderNo||'',c.name||'',c.phone||'',c.email||'',c.company||'',c.title||'',c.research||'',c.conference||'',ST[c.status]||'',(c.followRecords||[]).length,c.createTime||'',c.updateTime||'',(c.remarks||'').replace(/\n/g,' ')].map(v=>{const x=String(v);return x.includes('\t')||x.includes('"')?'"'+x.replace(/"/g,'""')+'"':x;}).join(sep)+'\n';
+    s += [i+1,TY[c.type]||'',c.orderNo||'',c.name||'',c.phone||'',c.email||'',c.company||'',c.title||'',c.research||'',c.conference||'',ST[c.status]||'',(c.followRecords||[]).length,c.createTime||'',c.updateTime||'',(c.remarks||'').replace(/\n/g,' ')].map(escapeCSV).join(',')+'\n';
   });
   const d=new Date(); const fn=`客户资料_${d.getFullYear()}${custP2(d.getMonth()+1)}${custP2(d.getDate())}.csv`;
   dl('\ufeff'+s, fn, 'text/csv;charset=utf-8;');
@@ -1670,10 +1670,11 @@ function doExportCustomerCSV() {
 
 function doExportConferenceCSV() {
   if (!conferences || !conferences.length) { custToast('暂无会议数据可导出'); return; }
-  const sep = '\t';
-  let s = ['会议名称','简称','开始日期','结束日期','截稿日期','会议地点','状态','创建时间'].join(sep)+'\n';
+  // 使用逗号分隔，确保 Excel 能正确识别
+  const escapeCSV = v => { const x=String(v||''); return x.includes(',')||x.includes('"')||x.includes('\n')?'"'+x.replace(/"/g,'""')+'"':x; };
+  let s = ['会议名称','简称','开始日期','结束日期','截稿日期','会议地点','状态','创建时间'].map(escapeCSV).join(',')+'\n';
   conferences.forEach(c => {
-    s += [c.name||'',c.shortName||'',c.startDate||'',c.endDate||'',c.deadline||'',c.location||'',c.status||'',c.createTime||''].join(sep)+'\n';
+    s += [c.name||'',c.shortName||'',c.startDate||'',c.endDate||'',c.deadline||'',c.location||'',c.status||'',c.createTime||''].map(escapeCSV).join(',')+'\n';
   });
   const d=new Date(); const fn=`会议进度_${d.getFullYear()}${custP2(d.getMonth()+1)}${custP2(d.getDate())}.csv`;
   dl('\ufeff'+s, fn, 'text/csv;charset=utf-8;');
