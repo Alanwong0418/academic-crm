@@ -852,7 +852,7 @@
 </div>
 
 <!-- 隐藏导入 -->
-<input type="file" id="file-input" accept=".json" style="display:none;" onchange="handleFileImport(this)" />
+<input type="file" id="file-input" accept=".json,.csv" style="display:none;" onchange="handleFileImport(this)" />
 
 <!-- 详情侧滑面板 -->
 <div class="overlay" id="detailOverlay" onclick="closeDetail(event)">
@@ -1657,8 +1657,39 @@ function handleFileImport(input) {
   const reader = new FileReader();
   reader.onload = e => {
     try {
-      const list = JSON.parse(e.target.result);
-      if (!Array.isArray(list)) throw new Error('格式错误');
+      const text = e.target.result;
+      let list = [];
+      if (f.name.endsWith('.csv')) {
+        // CSV 导入：解析 TSV 格式的 CSV
+        const lines = text.split('\n').filter(l => l.trim());
+        if (lines.length < 2) throw new Error('CSV 文件内容为空');
+        // 跳过表头，解析数据行
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].split('\t');
+          if (cols.length >= 2) {
+            list.push({
+              name: cols[3] || '',
+              phone: cols[4] || '',
+              email: cols[5] || '',
+              company: cols[6] || '',
+              title: cols[7] || '',
+              research: cols[8] || '',
+              conference: cols[9] || '',
+              status: cols[10] || 'potential',
+              type: cols[1] === '会议客户' ? 'conference' : 'journal',
+              orderNo: cols[2] || '',
+              followRecords: [],
+              createTime: cols[12] || new Date().toISOString(),
+              updateTime: cols[13] || new Date().toISOString(),
+              remarks: cols[14] || ''
+            });
+          }
+        }
+      } else {
+        // JSON 导入
+        list = JSON.parse(text);
+        if (!Array.isArray(list)) throw new Error('格式错误');
+      }
       custSave(list);
       renderCustomerTable();
       custToast(`✅ 成功导入 ${list.length} 条客户数据`);
