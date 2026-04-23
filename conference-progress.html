@@ -120,6 +120,24 @@
       border-radius: 4px; cursor: pointer; white-space: nowrap; transition: all .15s;
     }
     .user-logout-btn:hover { background: rgba(255,255,255,.15); color: #fff; }
+    /* 数据管理折叠菜单 */
+    .sidebar-data-manager {
+      margin-bottom: 10px;
+    }
+    .data-manager-title {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 10px; border-radius: 6px;
+      color: rgba(255,255,255,.5); font-size: 12px; cursor: pointer;
+      transition: all .15s;
+    }
+    .data-manager-title:hover { background: rgba(255,255,255,.05); color: rgba(255,255,255,.7); }
+    .data-manager-arrow { font-size: 10px; transition: transform .2s; }
+    .data-manager-items { padding: 4px 0; }
+    .data-item {
+      padding: 7px 10px 7px 20px; font-size: 12px; color: rgba(255,255,255,.6);
+      border-radius: 4px; cursor: pointer; transition: all .15s;
+    }
+    .data-item:hover { background: rgba(255,255,255,.1); color: #fff; }
 
     /* ══ 主内容区 ══ */
     .main-content {
@@ -542,21 +560,21 @@
         <span class="nav-count" id="confCount">0</span>
       </div>
 
-      <div class="nav-group-label">数据管理</div>
-      <div class="nav-item" onclick="doExportCSV()">
-        <span class="nav-icon">📊</span>
-        <span>导出 Excel</span>
-      </div>
-      <div class="nav-item" onclick="doExportJSON()">
-        <span class="nav-icon">☁️</span>
-        <span>备份数据</span>
-      </div>
-      <div class="nav-item" onclick="triggerImport()">
-        <span class="nav-icon">📥</span>
-        <span>导入数据</span>
-      </div>
     </nav>
     <div class="sidebar-footer">
+      <!-- 数据管理 -->
+      <div class="sidebar-data-manager">
+        <div class="data-manager-title" onclick="toggleDataManager()">
+          <span>📊 数据管理</span>
+          <span class="data-manager-arrow" id="dataManagerArrow">▼</span>
+        </div>
+        <div class="data-manager-items" id="dataManagerItems" style="display:none;">
+          <div class="data-item" onclick="doExportCSV()">导出 Excel</div>
+          <div class="data-item" onclick="doExportJSON()">备份数据</div>
+          <div class="data-item" onclick="triggerImport()">导入数据</div>
+        </div>
+      </div>
+      <!-- 用户信息 -->
       <div class="sidebar-user">
         <div class="user-avatar-sm" id="sidebarAvatar">U</div>
         <span class="user-email-sm" id="sidebarEmail">未登录</span>
@@ -1918,6 +1936,17 @@ async function doRegister() {
   } catch(e) {
     errEl.style.color = '#ef4444';
     errEl.textContent = '注册失败：' + e.message;
+  }
+}
+function toggleDataManager() {
+  const items = document.getElementById('dataManagerItems');
+  const arrow = document.getElementById('dataManagerArrow');
+  if (items.style.display === 'none') {
+    items.style.display = 'block';
+    arrow.textContent = '▲';
+  } else {
+    items.style.display = 'none';
+    arrow.textContent = '▼';
   }
 }
 function doLogout() {
