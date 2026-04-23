@@ -1684,13 +1684,34 @@ function handleFileImport(input) {
       } else {
         // JSON 导入：支持直接数组和包装对象两种格式
         const data = JSON.parse(text);
+        let rawList = [];
         if (Array.isArray(data)) {
-          list = data;
+          rawList = data;
         } else if (data.customers && Array.isArray(data.customers)) {
-          list = data.customers;  // 兼容旧页面导出的包装格式
+          rawList = data.customers;  // 兼容旧页面导出的包装格式
         } else {
           throw new Error('JSON 格式不正确');
         }
+        // 字段名兼容转换（下划线 → 驼峰，状态值转换）
+        const statusMap = { submitted: 'contacted', paid: 'signed' };
+        list = rawList.map(c => ({
+          id: c.id || c.id,
+          name: c.name || '',
+          phone: c.phone || '',
+          email: c.email || '',
+          company: c.company || '',
+          title: c.title || '',
+          research: c.research || '',
+          orderNo: c.order_no || c.orderNo || '',
+          conference: c.conference || '',
+          status: statusMap[c.status] || c.status || 'potential',
+          type: c.type || 'conference',
+          remarks: c.remarks || '',
+          createTime: c.create_time || c.createTime || new Date().toISOString(),
+          updateTime: c.update_time || c.updateTime || new Date().toISOString(),
+          // followRecords 如果是数组则保留，否则设为空数组
+          followRecords: Array.isArray(c.followRecords) ? c.followRecords : []
+        }));
       }
       custSave(list);
       renderCustomerTable();
