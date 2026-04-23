@@ -1642,17 +1642,16 @@ function doSaveCustomer() {
 // ═══════════════════════════════════════════════
 //  导出 / 导入
 // ═══════════════════════════════════════════════
-function doExportCSV() {
-  // 先询问导出哪类数据
-  miniModal({
+async function doExportCSV() {
+  const r = await miniModal({
     title: '选择导出类型',
     content: '请选择要导出的数据：',
     showCancel: true,
     confirm: '客户资料',
-    cancel: '会议进度',
-    onConfirm: () => doExportCustomerCSV(),
-    onCancel: () => doExportConferenceCSV()
+    cancel: '会议进度'
   });
+  if (r.ok) doExportCustomerCSV();
+  else doExportConferenceCSV();
 }
 
 function doExportCustomerCSV() {
@@ -1680,17 +1679,16 @@ function doExportConferenceCSV() {
   dl('\ufeff'+s, fn, 'text/csv;charset=utf-8;');
 }
 
-function doExportJSON() {
-  // 先询问导出哪类数据
-  miniModal({
+async function doExportJSON() {
+  const r = await miniModal({
     title: '选择导出类型',
     content: '请选择要导出的数据：',
     showCancel: true,
     confirm: '客户资料',
-    cancel: '会议进度',
-    onConfirm: () => doExportCustomerJSON(),
-    onCancel: () => doExportConferenceJSON()
+    cancel: '会议进度'
   });
+  if (r.ok) doExportCustomerJSON();
+  else doExportConferenceJSON();
 }
 
 function doExportCustomerJSON() {
