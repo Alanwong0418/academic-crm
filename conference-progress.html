@@ -1372,7 +1372,7 @@ function renderCustomerTable() {
         <td>${custEsc(c.conference) || '<span style="color:#d1d5db;">—</span>'}</td>
         <td><span class="badge ${CUST_BADGE_CLASS[c.status]||''}">${CUST_STATUS[c.status]||c.status}</span></td>
         <td><span style="color:${(c.followRecords||[]).length>0?'var(--brand)':'var(--text-muted)'};">${(c.followRecords||[]).length} 条</span></td>
-        <td style="color:var(--text-muted);">${c.updateTime||''}</td>
+        <td style="color:var(--text-muted);white-space:nowrap;">${c.updateTime||''}</td>
         <td>
           <div class="td-actions">
             <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openCustomerEditModal('${custEsc(c.id)}')">编辑</button>
