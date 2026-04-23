@@ -1686,9 +1686,15 @@ function handleFileImport(input) {
           }
         }
       } else {
-        // JSON 导入
-        list = JSON.parse(text);
-        if (!Array.isArray(list)) throw new Error('格式错误');
+        // JSON 导入：支持直接数组和包装对象两种格式
+        const data = JSON.parse(text);
+        if (Array.isArray(data)) {
+          list = data;
+        } else if (data.customers && Array.isArray(data.customers)) {
+          list = data.customers;  // 兼容旧页面导出的包装格式
+        } else {
+          throw new Error('JSON 格式不正确');
+        }
       }
       custSave(list);
       renderCustomerTable();
