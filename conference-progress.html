@@ -818,7 +818,6 @@
         <div class="form-group">
           <label class="form-label">客户状态</label>
           <select class="form-select" id="cf-status">
-            <option value="potential">潜在客户</option>
             <option value="contacted">已投稿</option>
             <option value="signed">已缴费</option>
             <option value="completed">已结项</option>
@@ -1222,9 +1221,9 @@ function copyText(text, msg) {
   navigator.clipboard.writeText(text).then(() => custToast(msg || '已复制')).catch(() => custToast('复制失败'));
 }
 
-const CUST_STATUS = { potential:'潜在客户', contacted:'已投稿', signed:'已缴费', completed:'已结项' };
-const CUST_BADGE_CLASS = { potential:'badge-potential', contacted:'badge-submitted', signed:'badge-paid', completed:'badge-closed' };
-const CUST_STATUS_SEL_CLASS = { potential:'potential', contacted:'contacted', signed:'signed', completed:'completed' };
+const CUST_STATUS = { contacted:'已投稿', signed:'已缴费', completed:'已结项' };
+const CUST_BADGE_CLASS = { contacted:'badge-submitted', signed:'badge-paid', completed:'badge-closed' };
+const CUST_STATUS_SEL_CLASS = { contacted:'contacted', signed:'signed', completed:'completed' };
 
 // ═══════════════════════════════════════════════
 //  全局状态
@@ -1499,7 +1498,6 @@ function renderCustomerDrawer(id) {
         <div class="hero-name">${custEsc(c.name)}</div>
         <div class="hero-meta">
           <select class="status-select ${CUST_STATUS_SEL_CLASS[c.status]||''}" onchange="onCustStatusChange('${custEsc(c.id)}',this.value)">
-            <option value="potential" ${c.status==='potential'?'selected':''}>潜在客户</option>
             <option value="contacted" ${c.status==='contacted'?'selected':''}>已投稿</option>
             <option value="signed" ${c.status==='signed'?'selected':''}>已缴费</option>
             <option value="completed" ${c.status==='completed'?'selected':''}>已结项</option>
@@ -1556,7 +1554,7 @@ function openAddModal() {
   ['cf-name','cf-phone','cf-email','cf-company','cf-title','cf-research','cf-orderno','cf-conference','cf-remarks'].forEach(id => {
     document.getElementById(id).value='';
   });
-  document.getElementById('cf-status').value = 'potential';
+  document.getElementById('cf-status').value = 'contacted';
   document.getElementById('cf-orderno').value = '';
   const isJournal = custG.type === 'journal';
   document.getElementById('cf-conf-label').textContent = isJournal ? '意向期刊' : '关联会议';
