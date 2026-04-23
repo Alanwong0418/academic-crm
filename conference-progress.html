@@ -1643,10 +1643,23 @@ function doSaveCustomer() {
 //  导出 / 导入
 // ═══════════════════════════════════════════════
 function doExportCSV() {
+  // 先询问导出哪类数据
+  miniModal({
+    title: '选择导出类型',
+    content: '请选择要导出的数据：',
+    showCancel: true,
+    confirm: '客户资料',
+    cancel: '会议进度',
+    onConfirm: () => doExportCustomerCSV(),
+    onCancel: () => doExportConferenceCSV()
+  });
+}
+
+function doExportCustomerCSV() {
   const list = custLoad();
-  if (!list.length) { custToast('暂无数据可导出'); return; }
+  if (!list.length) { custToast('暂无客户数据可导出'); return; }
   const sep = '\t';
-  const ST = { potential:'潜在客户', contacted:'已联系', signed:'已签约', completed:'已完成' };
+  const ST = { contacted:'已投稿', signed:'已缴费', completed:'已结项' };
   const TY = { conference:'会议客户', journal:'期刊客户' };
   let s = ['序号','类型','订单号','姓名','电话','邮箱','工作单位','职称','研究方向','关联会议/期刊','状态','跟进记录数','创建时间','更新时间','备注'].join(sep)+'\n';
   list.forEach((c,i) => {
@@ -1655,11 +1668,42 @@ function doExportCSV() {
   const d=new Date(); const fn=`客户资料_${d.getFullYear()}${custP2(d.getMonth()+1)}${custP2(d.getDate())}.csv`;
   dl('\ufeff'+s, fn, 'text/csv;charset=utf-8;');
 }
+
+function doExportConferenceCSV() {
+  if (!conferences || !conferences.length) { custToast('暂无会议数据可导出'); return; }
+  const sep = '\t';
+  let s = ['会议名称','简称','开始日期','结束日期','截稿日期','会议地点','状态','创建时间'].join(sep)+'\n';
+  conferences.forEach(c => {
+    s += [c.name||'',c.shortName||'',c.startDate||'',c.endDate||'',c.deadline||'',c.location||'',c.status||'',c.createTime||''].join(sep)+'\n';
+  });
+  const d=new Date(); const fn=`会议进度_${d.getFullYear()}${custP2(d.getMonth()+1)}${custP2(d.getDate())}.csv`;
+  dl('\ufeff'+s, fn, 'text/csv;charset=utf-8;');
+}
+
 function doExportJSON() {
+  // 先询问导出哪类数据
+  miniModal({
+    title: '选择导出类型',
+    content: '请选择要导出的数据：',
+    showCancel: true,
+    confirm: '客户资料',
+    cancel: '会议进度',
+    onConfirm: () => doExportCustomerJSON(),
+    onCancel: () => doExportConferenceJSON()
+  });
+}
+
+function doExportCustomerJSON() {
   const list = custLoad();
-  if (!list.length) { custToast('暂无数据可导出'); return; }
+  if (!list.length) { custToast('暂无客户数据可导出'); return; }
   const d=new Date(); const fn=`客户资料备份_${d.getFullYear()}${custP2(d.getMonth()+1)}${custP2(d.getDate())}.json`;
   dl(JSON.stringify(list, null, 2), fn, 'application/json');
+}
+
+function doExportConferenceJSON() {
+  if (!conferences || !conferences.length) { custToast('暂无会议数据可导出'); return; }
+  const d=new Date(); const fn=`会议进度备份_${d.getFullYear()}${custP2(d.getMonth()+1)}${custP2(d.getDate())}.json`;
+  dl(JSON.stringify(conferences, null, 2), fn, 'application/json');
 }
 function dl(data, fn, type) { const b=new Blob([data],{type}); const u=URL.createObjectURL(b); const a=document.createElement('a'); a.href=u; a.download=fn; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(u); }
 
