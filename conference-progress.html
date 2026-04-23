@@ -1670,11 +1670,37 @@ function doExportCustomerCSV() {
 
 function doExportConferenceCSV() {
   if (!conferences || !conferences.length) { custToast('暂无会议数据可导出'); return; }
-  // 使用逗号分隔，确保 Excel 能正确识别
   const escapeCSV = v => { const x=String(v||''); return x.includes(',')||x.includes('"')||x.includes('\n')?'"'+x.replace(/"/g,'""')+'"':x; };
-  let s = ['会议名称','简称','开始日期','结束日期','截稿日期','会议地点','状态','创建时间'].map(escapeCSV).join(',')+'\n';
+  // 完整字段列表
+  const headers = [
+    '会议名称','简称','开始日期','结束日期','会议地点','状态',
+    '截稿日期(总)','一轮截稿','二轮截稿','三轮截稿','四轮截稿','最终截稿','早鸟日期',
+    '公告1','公告2','公告3',
+    'Twitter','LinkedIn','WeChat','Weibo',
+    '海报状态','推文状态','会议通知状态',
+    '总收入目标','论文目标数','历史信息',
+    '创建时间','更新时间'
+  ];
+  let s = headers.map(escapeCSV).join(',')+'\n';
   conferences.forEach(c => {
-    s += [c.name||'',c.shortName||'',c.startDate||'',c.endDate||'',c.deadline||'',c.location||'',c.status||'',c.createTime||''].map(escapeCSV).join(',')+'\n';
+    // 从 progress 中提取社媒信息
+    const prog = c.progress || {};
+    const announce = prog['announcement'] || {};
+    const social = prog['social'] || {};
+    const poster = prog['poster'] || {};
+    const tweet = prog['tweet'] || {};
+    const notice = prog['notice'] || {};
+    
+    const row = [
+      c.name||'', c.shortName||'', c.startDate||'', c.endDate||'', c.location||'', c.status||'',
+      c.deadline||'', c.deadline_r1||'', c.deadline_r2||'', c.deadline_r3||'', c.deadline_r4||'', c.final_deadline||'', c.early_bird_date||'',
+      announce.online_r1||'', announce.online_r2||'', announce.online_r3||'',
+      social.twitter||'', social.linkedin||'', social.wechat||'', social.weibo||'',
+      poster.done?'完成':'未完成', tweet.done?'完成':'未完成', notice.done?'完成':'未完成',
+      c.target_income||'', c.paper_target||'', c.history||'',
+      c.createTime||'', c.updateTime||''
+    ];
+    s += row.map(escapeCSV).join(',')+'\n';
   });
   const d=new Date(); const fn=`会议进度_${d.getFullYear()}${custP2(d.getMonth()+1)}${custP2(d.getDate())}.csv`;
   dl('\ufeff'+s, fn, 'text/csv;charset=utf-8;');
