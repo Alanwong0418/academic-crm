@@ -1478,8 +1478,21 @@ function localToCloud(local) {
 async function loadCustomers() {
   if (!currentUserId) return [];
   try {
+    // 1. 加载客户列表
     const rows = await sbFetch('/rest/v1/customers?user_id=eq.' + currentUserId + '&order=update_time.desc');
-    // 自动迁移旧状态值并同步到数据库
+
+    // 2. 加载所有跟进记录（按 customer_id 分组）
+    let frMap = {};
+    try {
+      const allFR = await sbFetch('/rest/v1/follow_records?order=date.desc');
+      for (const fr of (allFR || [])) {
+        const cid = String(fr.customer_id);
+        if (!frMap[cid]) frMap[cid] = [];
+        frMap[cid].push({ date: fr.date || '', content: fr.content || '' });
+      }
+    } catch(e) {}
+
+    // 3. 转换并迁移旧状态值
     let migrated = false;
     for (const row of (rows || [])) {
       if (STATUS_MIGRATE[row.status]) {
@@ -1490,17 +1503,26 @@ async function loadCustomers() {
             body: JSON.stringify({ status: newStatus, update_time: custNow() })
           });
         } catch(e) {}
-        row.status = newStatus; // 同步本地缓存
+        row.status = newStatus;
         migrated = true;
       }
     }
+
+    // 4. 重新查询确保状态一致（如有迁移）
+    let finalRows = rows;
     if (migrated) {
-      // 重新查询确保数据一致
-      const fresh = await sbFetch('/rest/v1/customers?user_id=eq.' + currentUserId + '&order=update_time.desc');
-      cloudCustomers = (fresh || []).map(cloudToLocal);
-    } else {
-      cloudCustomers = (rows || []).map(cloudToLocal);
+      try {
+        finalRows = await sbFetch('/rest/v1/customers?user_id=eq.' + currentUserId + '&order=update_time.desc');
+      } catch(e) {}
     }
+
+    // 5. 合并跟进记录
+    cloudCustomers = (finalRows || []).map(row => {
+      const local = cloudToLocal(row);
+      local.followRecords = frMap[String(row.id)] || [];
+      return local;
+    });
+
     return cloudCustomers;
   } catch(e) {
     custToast('加载客户数据失败');
@@ -1513,22 +1535,29 @@ function custLoad() { return cloudCustomers; }
 function custFind(id) { return cloudCustomers.find(c => c.id === String(id)) || null; }
 
 async function custCreate(data) {
+  const localId = Date.now().toString();
   const local = {
     ...data,
-    id: Date.now().toString(),
+    id: localId,
     createTime: custNow(),
     updateTime: custNow(),
-    followRecords: []
+    followRecords: data.followRecords || []
   };
   const cloud = localToCloud(local);
+  // 不含 followRecords，避免 JSON 列报错
+  const { followRecords: _fr, ...cloudNoFr } = cloud;
   try {
-    const rows = await sbFetch('/rest/v1/customers', {
-      method: 'POST',
-      body: JSON.stringify(cloud)
-    });
-    // 重新查询获取真实 id
-    const fresh = await sbFetch('/rest/v1/customers?user_id=eq.' + currentUserId + '&order=update_time.desc');
-    cloudCustomers = (fresh || []).map(cloudToLocal);
+    await sbFetch('/rest/v1/customers', { method: 'POST', body: JSON.stringify(cloudNoFr) });
+    // 写入跟进记录（用 localId 作为关联，假设 Supabase 也是数字 ID 可匹配）
+    if (local.followRecords.length > 0) {
+      for (const rec of local.followRecords) {
+        await sbFetch('/rest/v1/follow_records', {
+          method: 'POST',
+          body: JSON.stringify({ customer_id: localId, content: rec.content, date: rec.date || '' })
+        }).catch(() => {});
+      }
+    }
+    await loadCustomers();
     return local;
   } catch(e) {
     custToast('保存客户失败');
