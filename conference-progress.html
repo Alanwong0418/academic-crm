@@ -500,7 +500,7 @@
        移动端完整适配（≤ 768px）
     ══════════════════════════════════ */
     /* 桌面端隐藏移动端专属元素 */
-    .mobile-search-row, .mobile-header, .mobile-tabbar, .mobile-sidebar-drawer, .mobile-drawer-mask { display: none; }
+    .mobile-search-row, .mobile-header, .mobile-tabbar, .mobile-sidebar-drawer, .mobile-drawer-mask { display: none !important; }
     /* 移动顶部 header */
     .mobile-header {
       display: none;
@@ -561,7 +561,7 @@
 
       /* 内容区留出顶部和底部 tabbar 的空间 */
       .content {
-        padding: 12px; padding-top: 64px; padding-bottom: 70px;
+        padding: 12px; padding-top: 120px; padding-bottom: 70px;
         overflow-y: visible; min-height: 100vh;
       }
 
