@@ -495,15 +495,157 @@
 
     /* ─── 响应式 ─── */
     @media (max-width:1100px) { .stats-grid { grid-template-columns:repeat(3,1fr); } }
-    @media (max-width:768px) {
-      :root { --sidebar-w: 60px; }
-      .brand-name, .brand-sub, .nav-item > span:not(.nav-icon), .nav-count, .nav-group-label { display:none; }
-      .nav-item { justify-content:center; padding:10px; }
-      .sidebar-brand { justify-content:center; }
-      .user-email-sm, .user-logout-btn { display:none; }
-      .stats-grid { grid-template-columns:repeat(2,1fr); }
-      #cardView { grid-template-columns:1fr; }
-      .detail-panel { width:100vw; }
+
+    /* ══════════════════════════════════
+       移动端完整适配（≤ 768px）
+    ══════════════════════════════════ */
+    /* 移动顶部 header */
+    .mobile-header {
+      display: none;
+      position: fixed; top: 0; left: 0; right: 0; z-index: 300;
+      height: 52px; background: #1e293b;
+      align-items: center; padding: 0 14px; gap: 10px;
+    }
+    .mobile-header-brand { display:flex; align-items:center; gap:8px; flex:1; }
+    .mobile-header-brand .brand-icon { width:28px; height:28px; font-size:14px; border-radius:7px; }
+    .mobile-header-brand .brand-name { color:#fff; font-size:14px; font-weight:600; }
+    .mobile-header-title { flex:1; color:#fff; font-size:15px; font-weight:600; text-align:center; }
+    .mobile-menu-btn {
+      width:34px; height:34px; border-radius:8px; background:rgba(255,255,255,.1);
+      color:#fff; font-size:18px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;
+    }
+    /* 移动端侧边栏抽屉 */
+    .mobile-drawer-mask {
+      display: none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:400;
+    }
+    .mobile-drawer-mask.open { display:block; }
+    .mobile-sidebar-drawer {
+      position:fixed; top:0; left:0; bottom:0; width:260px;
+      background:#1e293b; z-index:401;
+      transform:translateX(-100%); transition:transform .28s ease;
+      display:flex; flex-direction:column; overflow:hidden;
+    }
+    .mobile-sidebar-drawer.open { transform:translateX(0); }
+    /* 底部标签栏 */
+    .mobile-tabbar {
+      display: none;
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 300;
+      height: 56px; background: #fff;
+      border-top: 1px solid var(--border);
+      box-shadow: 0 -2px 10px rgba(0,0,0,.07);
+      align-items: stretch;
+    }
+    .tab-item {
+      flex: 1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap: 2px; cursor:pointer; color:var(--text-muted); font-size:10px; font-weight:500;
+      transition: color .15s; padding-bottom: 2px;
+    }
+    .tab-item.active { color:var(--brand); }
+    .tab-item-icon { font-size:20px; line-height:1; }
+
+    @media (max-width: 768px) {
+      /* 隐藏桌面侧边栏，显示移动端元素 */
+      .sidebar { display: none !important; }
+      .mobile-header { display: flex; }
+      .mobile-tabbar { display: flex; }
+
+      /* 主布局调整 */
+      #app { flex-direction: column; height: auto; overflow: auto; }
+      #app.active { display: block; }
+      .main-content { overflow: visible; height: auto; }
+
+      /* 顶部 topbar 在移动端隐藏，改由 mobile-header + 搜索行替代 */
+      .topbar { display: none; }
+
+      /* 内容区留出顶部和底部 tabbar 的空间 */
+      .content {
+        padding: 12px; padding-top: 64px; padding-bottom: 70px;
+        overflow-y: visible; min-height: 100vh;
+      }
+
+      /* 统计卡片 2 列 */
+      .stats-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px; }
+      .stat-card { padding: 12px 14px; }
+      .stat-icon { width: 36px; height: 36px; font-size: 16px; }
+      .stat-num { font-size: 20px; }
+
+      /* 卡片视图 1 列 */
+      #cardView { grid-template-columns: 1fr !important; }
+
+      /* 时间轴视图移动端横向滚动 */
+      #timelineView { overflow-x: auto; }
+      .timeline-header { min-width: 600px; }
+      .timeline-body { min-width: 600px; }
+
+      /* 客户表格 → 卡片模式 */
+      .table-wrap { border-radius: 8px; overflow: hidden; margin-top: 10px; }
+      .table-wrap table { display: block; }
+      .table-wrap thead { display: none; }
+      .table-wrap tbody { display: flex; flex-direction: column; gap: 10px; padding: 10px; background: var(--bg); }
+      .table-wrap tbody tr {
+        display: flex; flex-direction: column; gap: 6px;
+        background: #fff; border-radius: 10px; padding: 14px;
+        box-shadow: var(--shadow); border: 1px solid var(--border);
+        cursor: pointer; transition: box-shadow .15s;
+      }
+      .table-wrap tbody tr:hover { box-shadow: var(--shadow-md); }
+      .table-wrap td {
+        display: flex; align-items: flex-start; gap: 8px;
+        padding: 0; border: none; font-size: 13px;
+      }
+      /* 给每列加数据标签 */
+      .table-wrap td[data-label]::before {
+        content: attr(data-label);
+        flex-shrink: 0; width: 56px;
+        font-size: 11px; font-weight: 600; color: var(--text-muted);
+        padding-top: 1px;
+      }
+      .table-wrap td.td-actions { justify-content: flex-end; margin-top: 4px; }
+      .table-wrap td.td-actions::before { display: none; }
+
+      /* 详情弹窗全屏 */
+      .overlay { align-items: flex-end !important; }
+      .detail-panel {
+        width: 100vw !important; height: 92vh;
+        border-radius: 16px 16px 0 0;
+        animation: slideUp .25s ease !important;
+      }
+      @keyframes slideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+
+      /* 抽屉全屏 */
+      .drawer { width: 100vw !important; }
+
+      /* 新建会议弹窗 */
+      .modal { max-width: 100% !important; border-radius: 16px 16px 0 0; margin-top: auto; }
+      .modal-overlay { align-items: flex-end !important; padding: 0 !important; }
+      .form-row { grid-template-columns: 1fr !important; }
+
+      /* mini 弹窗 */
+      .mini-box { width: 96% !important; }
+
+      /* 搜索行 */
+      .mobile-search-row {
+        position: fixed; top: 52px; left: 0; right: 0; z-index: 290;
+        background: #fff; border-bottom: 1px solid var(--border);
+        padding: 8px 12px; display: flex; gap: 8px; align-items: center;
+      }
+      .mobile-search-row .search-box { flex: 1; width: auto !important; height: 36px; }
+      .mobile-search-row .btn { height: 36px; padding: 0 14px; font-size: 13px; }
+      .mobile-search-row select { height: 36px; padding: 0 10px; border: 1.5px solid var(--border); border-radius: 6px; font-size: 13px; background: #fff; }
+
+      /* 分页 */
+      .pagination { padding: 10px 12px; flex-wrap: wrap; gap: 8px; }
+
+      /* task grid 在详情弹窗里的适配 */
+      .task-item { flex-wrap: wrap; gap: 6px; }
+      .task-status { flex-wrap: wrap; }
+      .date-input { width: 110px; }
+      .link-input { width: 150px; }
+      .info-grid { grid-template-columns: 1fr !important; }
+
+      /* toast 位置 */
+      .toast-wrap { right: 12px; bottom: 68px; }
+      .cust-toast { bottom: 68px; }
     }
   </style>
 </head>
@@ -525,6 +667,100 @@
 
 <!-- 主应用 -->
 <div id="app">
+
+  <!-- ══ 移动端顶部 header ══ -->
+  <div class="mobile-header" id="mobileHeader">
+    <div class="mobile-header-brand">
+      <div class="brand-icon">📚</div>
+      <span class="brand-name">学术管家</span>
+    </div>
+    <div class="mobile-menu-btn" onclick="openMobileDrawer()" title="更多">☰</div>
+  </div>
+
+  <!-- ══ 移动端侧边栏抽屉 ══ -->
+  <div class="mobile-drawer-mask" id="mobileDrawerMask" onclick="closeMobileDrawer()"></div>
+  <div class="mobile-sidebar-drawer" id="mobileSidebarDrawer">
+    <div class="sidebar-brand" style="border-bottom:1px solid rgba(255,255,255,.07);">
+      <div class="brand-icon">📚</div>
+      <div>
+        <div class="brand-name">学术管家</div>
+        <div class="brand-sub">会议进度管理</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-group-label">客户管理</div>
+      <div class="nav-item" onclick="switchMainModule('customer'); switchCustomerType('all'); closeMobileDrawer();">
+        <span class="nav-icon">👥</span><span>全部客户</span>
+      </div>
+      <div class="nav-item" onclick="switchMainModule('customer'); switchCustomerType('conference'); closeMobileDrawer();">
+        <span class="nav-icon">🎓</span><span>会议客户</span>
+      </div>
+      <div class="nav-item" onclick="switchMainModule('customer'); switchCustomerType('journal'); closeMobileDrawer();">
+        <span class="nav-icon">📖</span><span>期刊客户</span>
+      </div>
+      <div class="nav-group-label">会议进度</div>
+      <div class="nav-item" onclick="switchMainModule('conf'); filterByStatus('all'); closeMobileDrawer();">
+        <span class="nav-icon">📅</span><span>会议进度管理</span>
+      </div>
+      <div class="nav-group-label">数据管理</div>
+      <div class="nav-item" onclick="doExportCSV(); closeMobileDrawer();">
+        <span class="nav-icon">📤</span><span>导出 Excel</span>
+      </div>
+      <div class="nav-item" onclick="doExportJSON(); closeMobileDrawer();">
+        <span class="nav-icon">💾</span><span>备份数据</span>
+      </div>
+      <div class="nav-item" onclick="triggerImport(); closeMobileDrawer();">
+        <span class="nav-icon">📥</span><span>导入数据</span>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="user-avatar-sm" id="mobileAvatar">U</div>
+        <span class="user-email-sm" id="mobileEmail">未登录</span>
+        <button class="user-logout-btn" onclick="doLogout()">退出</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 移动端搜索行 ══ -->
+  <div class="mobile-search-row" id="mobileSearchRow">
+    <div class="search-box" id="mobileCustomerSearch" style="display:flex;">
+      <span>🔍</span>
+      <input type="text" placeholder="搜索姓名、电话、单位…" oninput="onCustomerSearch(this.value)">
+    </div>
+    <div class="search-box" id="mobileConfSearch" style="display:none;">
+      <span>🔍</span>
+      <input type="text" placeholder="搜索会议名称…" oninput="onSearchChange(this.value)">
+    </div>
+    <button class="btn btn-primary" id="mobileAddCustomerBtn" onclick="openAddModal()" style="display:flex;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      添加
+    </button>
+    <button class="btn btn-primary" id="mobileAddConfBtn" onclick="openConferenceAddModal()" style="display:none;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      新建
+    </button>
+  </div>
+
+  <!-- ══ 底部 Tab 栏 ══ -->
+  <div class="mobile-tabbar" id="mobileTabbar">
+    <div class="tab-item active" id="tab-cust" onclick="switchMainModule('customer'); switchCustomerType('all'); setActiveTab('tab-cust');">
+      <span class="tab-item-icon">👥</span>
+      <span>客户</span>
+    </div>
+    <div class="tab-item" id="tab-conf-cust" onclick="switchMainModule('customer'); switchCustomerType('conference'); setActiveTab('tab-conf-cust');">
+      <span class="tab-item-icon">🎓</span>
+      <span>会议客户</span>
+    </div>
+    <div class="tab-item" id="tab-conf" onclick="switchMainModule('conf'); filterByStatus('all'); setActiveTab('tab-conf');">
+      <span class="tab-item-icon">📅</span>
+      <span>会议进度</span>
+    </div>
+    <div class="tab-item" id="tab-menu" onclick="openMobileDrawer()">
+      <span class="tab-item-icon">☰</span>
+      <span>更多</span>
+    </div>
+  </div>
 
   <!-- ══════ 侧边栏 ══════ -->
   <aside class="sidebar">
@@ -1361,23 +1597,23 @@ function renderCustomerTable() {
     empty.style.display = 'none';
     tbody.innerHTML = pageData.map(c => `
       <tr onclick="openCustomerDetail('${custEsc(c.id)}')">
-        <td>
+        <td data-label="客户">
           <div class="td-name">${custEsc(c.name)}</div>
           <div class="td-sub">${custEsc(c.orderNo)}</div>
         </td>
-        <td>
+        <td data-label="联系方式">
           <div class="td-phone" onclick="event.stopPropagation();copyText('${custEsc(c.phone)}','电话已复制')">${custEsc(c.phone)}</div>
           ${c.email ? `<div class="td-sub" style="cursor:pointer;" onclick="event.stopPropagation();copyText('${custEsc(c.email)}','邮箱已复制')">${custEsc(c.email)}</div>` : ''}
         </td>
-        <td>
+        <td data-label="单位">
           <div>${custEsc(c.company)}</div>
           ${c.title ? `<div class="td-sub">${custEsc(c.title)}</div>` : ''}
         </td>
-        <td>${custEsc(c.conference) || '<span style="color:#d1d5db;">—</span>'}</td>
-        <td><span class="badge ${CUST_BADGE_CLASS[c.status]||''}">${CUST_STATUS[c.status]||c.status}</span></td>
-        <td><span style="color:${(c.followRecords||[]).length>0?'var(--brand)':'var(--text-muted)'};">${(c.followRecords||[]).length} 条</span></td>
-        <td style="color:var(--text-muted);white-space:nowrap;">${c.updateTime||''}</td>
-        <td>
+        <td data-label="关联会议">${custEsc(c.conference) || '<span style="color:#d1d5db;">—</span>'}</td>
+        <td data-label="状态"><span class="badge ${CUST_BADGE_CLASS[c.status]||''}">${CUST_STATUS[c.status]||c.status}</span></td>
+        <td data-label="跟进"><span style="color:${(c.followRecords||[]).length>0?'var(--brand)':'var(--text-muted)'};">${(c.followRecords||[]).length} 条</span></td>
+        <td data-label="更新时间" style="color:var(--text-muted);white-space:nowrap;">${c.updateTime||''}</td>
+        <td class="td-actions">
           <div class="td-actions">
             <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openCustomerEditModal('${custEsc(c.id)}')">编辑</button>
             <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteCustomerConfirm('${custEsc(c.id)}')">删除</button>
@@ -1835,6 +2071,16 @@ function switchMainModule(module) {
     document.getElementById('sort-select').style.display = 'inline-block';
   }
 
+  // 移动端搜索行同步
+  const mCustSearch = document.getElementById('mobileCustomerSearch');
+  const mConfSearch = document.getElementById('mobileConfSearch');
+  const mAddCust = document.getElementById('mobileAddCustomerBtn');
+  const mAddConf = document.getElementById('mobileAddConfBtn');
+  if (mCustSearch) mCustSearch.style.display = module === 'conf' ? 'none' : 'flex';
+  if (mConfSearch) mConfSearch.style.display = module === 'conf' ? 'flex' : 'none';
+  if (mAddCust) mAddCust.style.display = module === 'conf' ? 'none' : 'flex';
+  if (mAddConf) mAddConf.style.display = module === 'conf' ? 'flex' : 'none';
+
   // 会议模块：首次加载
   if (module === 'conf') {
     updateConfPageTitle();
@@ -1844,6 +2090,31 @@ function switchMainModule(module) {
       renderAll();
     }
   }
+}
+
+// ═══════════════════════════════════════════════
+//  移动端专属函数
+// ═══════════════════════════════════════════════
+function openMobileDrawer() {
+  document.getElementById('mobileDrawerMask').classList.add('open');
+  document.getElementById('mobileSidebarDrawer').classList.add('open');
+  // 同步用户信息
+  const email = document.getElementById('sidebarEmail')?.textContent || '';
+  const avatar = document.getElementById('sidebarAvatar')?.textContent || 'U';
+  const mEmail = document.getElementById('mobileEmail');
+  const mAvatar = document.getElementById('mobileAvatar');
+  if (mEmail) mEmail.textContent = email;
+  if (mAvatar) mAvatar.textContent = avatar;
+}
+function closeMobileDrawer() {
+  document.getElementById('mobileDrawerMask').classList.remove('open');
+  document.getElementById('mobileSidebarDrawer').classList.remove('open');
+}
+function setActiveTab(tabId) {
+  ['tab-cust','tab-conf-cust','tab-conf','tab-menu'].forEach(id => {
+    document.getElementById(id)?.classList.remove('active');
+  });
+  document.getElementById(tabId)?.classList.add('active');
 }
 
 function updateConfPageTitle() {
