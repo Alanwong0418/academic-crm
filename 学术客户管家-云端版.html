@@ -1,0 +1,1797 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>学术客户管家 · 云端版</title>
+  <!-- 无外部依赖，纯原生 fetch 调用 Supabase REST API -->
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --brand: #2563eb;
+      --brand-dark: #1d4ed8;
+      --brand-light: #eff6ff;
+      --sidebar-w: 220px;
+      --header-h: 56px;
+      --text-primary: #111827;
+      --text-secondary: #6b7280;
+      --text-muted: #9ca3af;
+      --border: #e5e7eb;
+      --bg: #f9fafb;
+      --white: #fff;
+      --radius: 8px;
+      --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,.1);
+    }
+    html, body { height: 100%; font-family: -apple-system,BlinkMacSystemFont,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif; font-size: 14px; color: var(--text-primary); background: var(--bg); }
+    button { cursor: pointer; border: none; outline: none; font-family: inherit; font-size: 14px; }
+    input, textarea, select { font-family: inherit; font-size: 14px; outline: none; }
+    a { text-decoration: none; color: inherit; }
+
+    /* ── 登录页 ── */
+    .auth-page {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 20px;
+    }
+    .auth-box {
+      background: var(--white); border-radius: 16px; padding: 40px 36px;
+      width: 100%; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,.2);
+    }
+    .auth-logo {
+      width: 56px; height: 56px; border-radius: 14px; background: var(--brand);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; margin: 0 auto 20px;
+    }
+    .auth-title { text-align: center; font-size: 22px; font-weight: 600; margin-bottom: 6px; }
+    .auth-subtitle { text-align: center; color: var(--text-secondary); font-size: 13px; margin-bottom: 28px; }
+    .auth-input {
+      width: 100%; padding: 12px 14px; border: 1.5px solid var(--border);
+      border-radius: 8px; margin-bottom: 14px; font-size: 14px;
+      transition: border-color .15s;
+    }
+    .auth-input:focus { border-color: var(--brand); }
+    .auth-btn {
+      width: 100%; padding: 12px; background: var(--brand); color: #fff;
+      border-radius: 8px; font-size: 15px; font-weight: 500; margin-top: 6px;
+      transition: background .15s;
+    }
+    .auth-btn:hover { background: var(--brand-dark); }
+    .auth-btn:disabled { opacity: .6; cursor: not-allowed; }
+    .auth-switch {
+      text-align: center; margin-top: 18px; font-size: 13px; color: var(--text-secondary);
+    }
+    .auth-switch a { color: var(--brand); font-weight: 500; }
+    .auth-error {
+      background: #fef2f2; color: #dc2626; padding: 10px 14px;
+      border-radius: 6px; font-size: 13px; margin-bottom: 14px; display: none;
+    }
+    .auth-error.show { display: block; }
+
+    /* ── 应用布局 ── */
+    #app { display: none; height: 100vh; overflow: hidden; }
+    #app.show { display: flex; }
+
+    /* ── 侧边栏 ── */
+    .sidebar {
+      width: var(--sidebar-w); flex-shrink: 0;
+      background: #1e293b;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .sidebar-brand {
+      height: var(--header-h);
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 18px;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+    }
+    .brand-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: var(--brand);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0;
+    }
+    .brand-name { color: #fff; font-size: 15px; font-weight: 600; letter-spacing: .3px; }
+    .brand-sub { color: rgba(255,255,255,.35); font-size: 11px; margin-top: 1px; }
+
+    .sidebar-nav { flex: 1; padding: 12px 10px; overflow-y: auto; }
+    .nav-group-label {
+      font-size: 11px; color: rgba(255,255,255,.3);
+      text-transform: uppercase; letter-spacing: .8px;
+      padding: 10px 8px 6px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: 6px;
+      color: rgba(255,255,255,.6); cursor: pointer;
+      transition: all .15s; margin-bottom: 2px;
+      font-size: 13.5px;
+    }
+    .nav-item:hover { background: rgba(255,255,255,.07); color: rgba(255,255,255,.9); }
+    .nav-item.active { background: var(--brand); color: #fff; }
+    .nav-icon { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+    .nav-count {
+      margin-left: auto; background: rgba(255,255,255,.15); color: rgba(255,255,255,.7);
+      font-size: 11px; padding: 1px 7px; border-radius: 10px; min-width: 24px; text-align: center;
+    }
+    .nav-item.active .nav-count { background: rgba(255,255,255,.25); color: #fff; }
+
+    /* ── 侧边栏子菜单 ── */
+    .nav-sub { padding-left: 24px; overflow: hidden; max-height: 0; transition: max-height .2s ease; }
+    .nav-sub.open { max-height: 200px; }
+    .nav-parent { position: relative; }
+    .nav-arrow {
+      margin-left: auto; font-size: 10px; color: rgba(255,255,255,.4);
+      transition: transform .2s;
+    }
+    .nav-parent.open .nav-arrow { transform: rotate(90deg); }
+    .nav-sub .nav-item { padding: 7px 12px; font-size: 13px; }
+
+    .sidebar-footer {
+      padding: 14px 10px;
+      border-top: 1px solid rgba(255,255,255,.07);
+    }
+    .sidebar-bottom-actions {
+      margin-top: auto;
+      padding: 8px 10px;
+      border-top: 1px solid rgba(255,255,255,.07);
+    }
+    .user-info {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 6px;
+      color: rgba(255,255,255,.7); font-size: 12px;
+    }
+    .user-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--brand); display: flex; align-items: center; justify-content: center;
+      font-size: 12px; color: #fff; font-weight: 600;
+    }
+    .user-email { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .logout-btn {
+      padding: 4px 8px; border-radius: 4px;
+      background: rgba(255,255,255,.1); color: rgba(255,255,255,.6);
+      font-size: 11px; cursor: pointer;
+    }
+    .logout-btn:hover { background: rgba(255,255,255,.15); color: #fff; }
+
+    /* ── 主区域 ── */
+    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+    /* ── 顶部工具栏 ── */
+    .topbar {
+      height: var(--header-h); flex-shrink: 0;
+      background: var(--white); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 12px; padding: 0 20px;
+    }
+    .topbar-title { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-right: 4px; }
+    .topbar-badge {
+      background: var(--brand-light); color: var(--brand);
+      font-size: 12px; font-weight: 500;
+      padding: 2px 8px; border-radius: 12px;
+    }
+    .topbar-spacer { flex: 1; }
+    .search-box {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+      padding: 0 12px; height: 34px; width: 260px; transition: all .15s;
+    }
+    .search-box:focus-within { border-color: var(--brand); background: var(--white); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+    .search-box input { flex: 1; border: none; background: transparent; color: var(--text-primary); }
+    .search-box input::placeholder { color: var(--text-muted); }
+    .search-icon { color: var(--text-muted); font-size: 14px; }
+    .clear-x { color: var(--text-muted); cursor: pointer; font-size: 12px; padding: 2px; display: none; }
+    .clear-x:hover { color: var(--text-secondary); }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 0 14px; height: 34px; border-radius: 6px;
+      font-size: 13.5px; font-weight: 500; cursor: pointer; transition: all .15s;
+      white-space: nowrap;
+    }
+    .btn-primary { background: var(--brand); color: #fff; }
+    .btn-primary:hover { background: var(--brand-dark); }
+    .btn-outline { background: var(--white); color: var(--text-secondary); border: 1px solid var(--border); }
+    .btn-outline:hover { border-color: var(--brand); color: var(--brand); background: var(--brand-light); }
+    .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid transparent; }
+    .btn-ghost:hover { background: var(--bg); border-color: var(--border); }
+    .btn-danger { background: #fff; color: #dc2626; border: 1px solid #fca5a5; }
+    .btn-danger:hover { background: #fef2f2; border-color: #dc2626; }
+    .btn-sm { height: 28px; padding: 0 10px; font-size: 12.5px; }
+
+    /* ── 筛选栏 ── */
+    .filter-bar {
+      padding: 12px 20px;
+      background: var(--white); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .filter-label { font-size: 13px; color: var(--text-secondary); margin-right: 4px; }
+    .filter-chip {
+      padding: 4px 14px; border-radius: 20px; font-size: 13px; cursor: pointer;
+      border: 1px solid var(--border); color: var(--text-secondary); background: var(--white);
+      transition: all .15s;
+    }
+    .filter-chip:hover:not(.active) { border-color: var(--brand); color: var(--brand); }
+    .filter-chip.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+    .filter-spacer { flex: 1; }
+    .sort-select {
+      padding: 4px 28px 4px 10px; border-radius: 6px; font-size: 13px;
+      border: 1px solid var(--border); background: var(--white); color: var(--text-secondary);
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 8px center;
+      cursor: pointer;
+    }
+
+    /* ── 内容区 ── */
+    .content { flex: 1; overflow-y: auto; padding: 20px; }
+
+    /* ── 统计卡片 ── */
+    .stats-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 20px; }
+    .stat-card {
+      background: var(--white); border-radius: var(--radius); padding: 18px 20px;
+      border: 1px solid var(--border); box-shadow: var(--shadow);
+      display: flex; align-items: center; gap: 14px;
+      cursor: pointer; transition: all .15s;
+    }
+    .stat-card:hover { border-color: var(--brand); box-shadow: var(--shadow-md); }
+    .stat-card.active { border-color: var(--brand); background: var(--brand-light); }
+    .stat-icon {
+      width: 44px; height: 44px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; font-size: 20px;
+      flex-shrink: 0;
+    }
+    .stat-icon.blue { background: #dbeafe; }
+    .stat-icon.purple { background: #ede9fe; }
+    .stat-icon.amber { background: #fef3c7; }
+    .stat-icon.green { background: #dcfce7; }
+    .stat-icon.orange { background: #ffedd5; }
+    .stat-icon.teal { background: #ccfbf1; }
+    .stat-num { font-size: 26px; font-weight: 700; color: var(--text-primary); line-height: 1; }
+    .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+
+    /* ── 表格 ── */
+    .table-wrap {
+      background: var(--white); border-radius: var(--radius);
+      border: 1px solid var(--border); box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: var(--bg); }
+    th {
+      padding: 11px 16px; text-align: left;
+      font-size: 12.5px; font-weight: 600; color: var(--text-secondary);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap; user-select: none;
+    }
+    th:first-child { padding-left: 20px; }
+    th:last-child { padding-right: 20px; text-align: right; }
+    tbody tr {
+      border-bottom: 1px solid #f3f4f6;
+      transition: background .12s; cursor: pointer;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #f8faff; }
+    td { padding: 13px 16px; font-size: 13.5px; color: var(--text-primary); vertical-align: middle; }
+    td:first-child { padding-left: 20px; }
+    td:last-child { padding-right: 20px; text-align: right; }
+    .td-name { font-weight: 600; color: var(--text-primary); }
+    .td-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .td-phone { color: var(--brand); cursor: pointer; font-size: 13px; }
+    .td-phone:hover { text-decoration: underline; }
+    .td-actions { display: flex; gap: 6px; justify-content: flex-end; opacity: 0; transition: opacity .15s; }
+    tbody tr:hover .td-actions { opacity: 1; }
+
+    /* ── 状态标签 ── */
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; white-space: nowrap;
+    }
+    .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; }
+    .badge-potential { background: #fef9c3; color: #854d0e; } .badge-potential::before { background: #eab308; }
+    .badge-submitted { background: #dbeafe; color: #1d4ed8; } .badge-submitted::before { background: #3b82f6; }
+    .badge-paid { background: #dcfce7; color: #15803d; } .badge-paid::before { background: #22c55e; }
+    .badge-finished { background: #f3e8ff; color: #7e22ce; } .badge-finished::before { background: #a855f7; }
+
+    /* ── 空状态 ── */
+    .empty {
+      text-align: center; padding: 64px 24px;
+    }
+    .empty-illustration { font-size: 56px; margin-bottom: 16px; opacity: .5; }
+    .empty-title { font-size: 15px; color: var(--text-secondary); margin-bottom: 8px; }
+    .empty-hint { font-size: 13px; color: var(--text-muted); }
+
+    /* ── 详情抽屉 ── */
+    .drawer-mask {
+      position: fixed; inset: 0; background: rgba(0,0,0,.3);
+      z-index: 500; opacity: 0; pointer-events: none; transition: opacity .2s;
+    }
+    .drawer-mask.open { opacity: 1; pointer-events: auto; }
+    .drawer {
+      position: fixed; top: 0; right: -520px; bottom: 0;
+      width: 520px; background: var(--white);
+      box-shadow: -4px 0 24px rgba(0,0,0,.12);
+      z-index: 501; transition: right .25s cubic-bezier(.4,0,.2,1);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .drawer.open { right: 0; }
+    .drawer-header {
+      height: 56px; padding: 0 20px;
+      display: flex; align-items: center; gap: 12px;
+      border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .drawer-title { font-size: 15px; font-weight: 600; flex: 1; }
+    .drawer-close { color: var(--text-muted); cursor: pointer; font-size: 20px; padding: 4px; line-height: 1; }
+    .drawer-close:hover { color: var(--text-primary); }
+    .drawer-body { flex: 1; overflow-y: auto; padding: 20px; }
+    .drawer-footer {
+      padding: 14px 20px; border-top: 1px solid var(--border);
+      display: flex; gap: 10px; flex-shrink: 0;
+    }
+
+    /* 抽屉内客户头部 */
+    .detail-hero {
+      display: flex; align-items: center; gap: 14px;
+      background: var(--bg); border-radius: var(--radius);
+      padding: 16px; margin-bottom: 20px; border: 1px solid var(--border);
+    }
+    .avatar {
+      width: 52px; height: 52px; border-radius: 12px;
+      background: linear-gradient(135deg, var(--brand), #60a5fa);
+      color: #fff; font-size: 22px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .hero-name { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .hero-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+    /* 信息块 */
+    .section-block { margin-bottom: 20px; }
+    .section-block-title {
+      font-size: 12.5px; font-weight: 600; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: .6px;
+      margin-bottom: 10px; padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .kv-grid { display: grid; grid-template-columns: 100px 1fr; row-gap: 10px; }
+    .kv-key { font-size: 13px; color: var(--text-muted); padding-top: 1px; }
+    .kv-val { font-size: 13.5px; color: var(--text-primary); word-break: break-all; }
+    .kv-val.copyable { cursor: pointer; color: var(--brand); }
+    .kv-val.copyable:hover { text-decoration: underline; }
+
+    /* 跟进时间线 */
+    .timeline { display: flex; flex-direction: column; gap: 0; }
+    .tl-item { display: flex; gap: 12px; padding: 8px 0; position: relative; }
+    .tl-item:not(:last-child)::before {
+      content: ''; position: absolute; left: 6px; top: 22px;
+      width: 1px; height: calc(100% - 8px); background: #e5e7eb;
+    }
+    .tl-dot { width: 13px; height: 13px; border-radius: 50%; background: var(--brand); flex-shrink: 0; margin-top: 2px; }
+    .tl-body { flex: 1; }
+    .tl-text { font-size: 13.5px; color: var(--text-primary); line-height: 1.6; }
+    .tl-date { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+    .no-follow { text-align: center; padding: 24px 0; color: var(--text-muted); font-size: 13px; }
+
+    /* ── 弹窗（添加/编辑） ── */
+    .modal-mask {
+      position: fixed; inset: 0; background: rgba(0,0,0,.4);
+      z-index: 700; display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity .2s;
+    }
+    .modal-mask.open { opacity: 1; pointer-events: auto; }
+    .modal-box {
+      background: var(--white); border-radius: 12px; width: 92%; max-width: 600px;
+      max-height: 90vh; display: flex; flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0,0,0,.2);
+      transform: scale(.95); transition: transform .2s;
+    }
+    .modal-mask.open .modal-box { transform: scale(1); }
+    .modal-header {
+      padding: 18px 20px 14px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+    }
+    .modal-title { font-size: 16px; font-weight: 600; flex: 1; }
+    .modal-close { color: var(--text-muted); cursor: pointer; font-size: 20px; line-height: 1; padding: 2px; }
+    .modal-close:hover { color: var(--text-primary); }
+    .modal-body { flex: 1; overflow-y: auto; padding: 20px; }
+    .modal-footer {
+      padding: 14px 20px; border-top: 1px solid var(--border);
+      display: flex; gap: 10px; justify-content: flex-end; flex-shrink: 0;
+    }
+
+    /* ── 表单 ── */
+    .form-section-title {
+      font-size: 12.5px; font-weight: 600; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: .6px;
+      margin: 0 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border);
+    }
+    .form-section-title:not(:first-child) { margin-top: 20px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-grid.full { grid-template-columns: 1fr; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group.span2 { grid-column: span 2; }
+    .form-label { font-size: 13px; color: var(--text-secondary); }
+    .form-label .req { color: #ef4444; margin-left: 2px; }
+    .form-input, .form-select, .form-textarea {
+      width: 100%; padding: 8px 12px;
+      border: 1.5px solid var(--border); border-radius: 6px;
+      font-size: 13.5px; color: var(--text-primary);
+      background: var(--white); transition: border-color .15s;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      border-color: var(--brand); box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+    }
+    .form-input:focus-visible { outline: none; }
+    /* 禁用浏览器原生验证红色边框 */
+    .form-input:invalid:not(:focus), .form-input:invalid:focus {
+      border-color: var(--border);
+      box-shadow: none;
+    }
+    .form-input:focus-visible:invalid {
+      border-color: var(--brand);
+      box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+    }
+    .form-input::placeholder, .form-textarea::placeholder { color: var(--text-muted); }
+    .form-select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 10px center;
+      padding-right: 32px;
+    }
+    .form-textarea { resize: none; height: 80px; line-height: 1.6; }
+
+    /* ── 小弹窗 ── */
+    .mini-modal-mask {
+      position: fixed; inset: 0; background: rgba(0,0,0,.4);
+      z-index: 900; display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity .15s;
+    }
+    .mini-modal-mask.open { opacity: 1; pointer-events: auto; }
+    .mini-box {
+      background: var(--white); border-radius: 12px; width: 90%; max-width: 400px;
+      padding: 24px 20px 20px; box-shadow: 0 16px 48px rgba(0,0,0,.18);
+      transform: scale(.95); transition: transform .15s;
+    }
+    .mini-modal-mask.open .mini-box { transform: scale(1); }
+    .mini-title { font-size: 15px; font-weight: 600; margin-bottom: 10px; }
+    .mini-content { font-size: 13.5px; color: var(--text-secondary); line-height: 1.7; margin-bottom: 16px; }
+    .mini-textarea {
+      width: 100%; min-height: 80px; padding: 9px 12px;
+      border: 1.5px solid var(--border); border-radius: 6px;
+      font-size: 13.5px; resize: none; line-height: 1.6; margin-bottom: 16px;
+    }
+    .mini-textarea:focus { border-color: var(--brand); outline: none; box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+    .mini-btns { display: flex; gap: 10px; justify-content: flex-end; }
+
+    /* ── 分页 ── */
+    .pagination {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px; border-top: 1px solid var(--border);
+      font-size: 13px; color: var(--text-secondary);
+      background: var(--white);
+    }
+    .page-btns { display: flex; gap: 6px; }
+    .page-btn {
+      width: 32px; height: 32px; border-radius: 6px; border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--text-secondary); font-size: 13px;
+      transition: all .12s; background: var(--white);
+    }
+    .page-btn:hover:not(:disabled) { border-color: var(--brand); color: var(--brand); }
+    .page-btn.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+    .page-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(10px);
+      background: #1e293b; color: #fff; padding: 10px 20px; border-radius: 8px;
+      font-size: 13.5px; z-index: 9999; pointer-events: none;
+      opacity: 0; transition: all .25s; white-space: nowrap;
+      box-shadow: 0 4px 16px rgba(0,0,0,.2);
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── 全局 Loading 遮罩 ── */
+    .loading-mask {
+      position: fixed; inset: 0; background: rgba(0,0,0,.15);
+      z-index: 9998; display: none; align-items: center; justify-content: center;
+    }
+    .loading-mask.show { display: flex; }
+    .loading-spinner {
+      background: var(--white); border-radius: 12px; padding: 20px 28px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.15);
+      display: flex; align-items: center; gap: 10px;
+      font-size: 14px; color: var(--text-primary); font-weight: 500;
+    }
+    .loading-spinner::before {
+      content: ''; width: 20px; height: 20px; border: 2.5px solid var(--border);
+      border-top-color: var(--brand); border-radius: 50%;
+      animation: spin .6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── 按钮 Loading 状态 ── */
+    .btn.loading, .auth-btn.loading {
+      pointer-events: none; opacity: .65; position: relative; color: transparent !important;
+    }
+    .btn.loading::after, .auth-btn.loading::after {
+      content: ''; position: absolute; width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%;
+      animation: spin .6s linear infinite; left: 50%; top: 50%;
+      margin-left: -8px; margin-top: -8px;
+    }
+    .btn-outline.loading, .btn-ghost.loading {
+      color: transparent !important;
+    }
+    .btn-outline.loading::after, .btn-ghost.loading::after {
+      border: 2px solid var(--border); border-top-color: var(--brand);
+    }
+
+    /* ── 状态切换下拉 ── */
+    .status-select {
+      padding: 4px 28px 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500;
+      border: 1.5px solid; cursor: pointer; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 8px center;
+    }
+    .status-select.potential { background-color: #fef9c3; color: #854d0e; border-color: #fde047; }
+    .status-select.submitted { background-color: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
+    .status-select.paid { background-color: #dcfce7; color: #15803d; border-color: #86efac; }
+    .status-select.finished { background-color: #f3e8ff; color: #7e22ce; border-color: #d8b4fe; }
+
+    /* ── 响应式 ── */
+    @media (max-width: 1100px) {
+      .stats-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 800px) {
+      :root { --sidebar-w: 60px; }
+      .brand-name, .brand-sub, .nav-item > span:not(.nav-icon), .nav-count, .nav-group-label { display: none; }
+      .nav-item { justify-content: center; padding: 10px; }
+      .sidebar-brand { justify-content: center; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .drawer { width: 100%; right: -100%; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════ 登录页 ══════ -->
+<div id="auth-page" class="auth-page">
+  <div class="auth-box">
+    <div class="auth-logo">📚</div>
+    <div class="auth-title">学术客户管家</div>
+    <div class="auth-subtitle">云端版 · 数据多端同步</div>
+    <div id="auth-error" class="auth-error"></div>
+    <input type="email" id="auth-email" class="auth-input" placeholder="邮箱地址" onkeydown="if(event.key==='Enter')document.getElementById('auth-password').focus()" />
+    <input type="password" id="auth-password" class="auth-input" placeholder="密码" onkeydown="if(event.key==='Enter')handleAuth()" />
+    <button id="auth-btn" class="auth-btn" onclick="handleAuth()">登录 / 注册</button>
+    <div class="auth-switch">
+      <span id="auth-hint">首次使用会自动注册账号</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ 应用主体 ══════ -->
+<div id="app">
+  <!-- ══════ 侧边栏 ══════ -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">📚</div>
+      <div>
+        <div class="brand-name">学术客户管家</div>
+        <div class="brand-sub">云端版</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-group-label">客户管理</div>
+      <div class="nav-item nav-parent active" id="nav-all" onclick="toggleNavSub()">
+        <span class="nav-icon">👥</span>
+        <span>全部客户</span>
+        <span class="nav-count" id="nc-all">0</span>
+        <span class="nav-arrow">▶</span>
+      </div>
+      <div class="nav-sub" id="nav-sub">
+        <div class="nav-item" id="nav-conference" onclick="switchType('conference')">
+          <span class="nav-icon">🎓</span>
+          <span>会议客户</span>
+          <span class="nav-count" id="nc-conf">0</span>
+        </div>
+        <div class="nav-item" id="nav-journal" onclick="switchType('journal')">
+          <span class="nav-icon">📖</span>
+          <span>期刊客户</span>
+          <span class="nav-count" id="nc-jour">0</span>
+        </div>
+      </div>
+    </nav>
+    <div class="sidebar-bottom-actions">
+      <div class="nav-item" onclick="showDataMenu()">
+        <span class="nav-icon">📊</span>
+        <span>数据管理</span>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="user-avatar">U</div>
+        <div class="user-email" id="user-email">加载中...</div>
+        <button class="logout-btn" onclick="logout()">退出</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══════ 主区域 ══════ -->
+  <main class="main">
+    <!-- 顶部栏 -->
+    <div class="topbar">
+      <span class="topbar-title" id="page-title">会议客户</span>
+      <span class="topbar-badge" id="page-count">0 位客户</span>
+      <div class="topbar-spacer"></div>
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input id="search-input" placeholder="搜索姓名、电话、单位、订单号…" oninput="onSearch(this.value)" />
+        <span class="clear-x" id="clear-x" onclick="clearSearch()">✕</span>
+      </div>
+      <button class="btn btn-primary" onclick="openAddModal()">
+        <span>＋</span> 添加客户
+      </button>
+    </div>
+
+    <div class="filter-bar">
+      <div class="filter-spacer"></div>
+      <select class="sort-select" id="sort-select" onchange="renderTable()">
+        <option value="updateTime_desc">最近更新</option>
+        <option value="createTime_desc">最新添加</option>
+        <option value="name_asc">姓名 A→Z</option>
+        <option value="signed_first">已缴费优先</option>
+      </select>
+    </div>
+    <!-- 内容 -->
+    <div class="content">
+      <!-- 统计卡片 -->
+      <div class="stats-grid">
+        <div class="stat-card" id="sc-all" onclick="switchType('all')">
+          <div class="stat-icon blue">👥</div>
+          <div>
+            <div class="stat-num" id="st-total">0</div>
+            <div class="stat-label">全部客户</div>
+          </div>
+        </div>
+        <div class="stat-card" id="sc-conference" onclick="switchType('conference')">
+          <div class="stat-icon amber">🎓</div>
+          <div>
+            <div class="stat-num" id="st-conference">0</div>
+            <div class="stat-label">会议</div>
+          </div>
+        </div>
+        <div class="stat-card" id="sc-journal" onclick="switchType('journal')">
+          <div class="stat-icon purple">📖</div>
+          <div>
+            <div class="stat-num" id="st-journal">0</div>
+            <div class="stat-label">期刊</div>
+          </div>
+        </div>
+        <div class="stat-card" id="sc-submitted" onclick="switchType('submitted')">
+          <div class="stat-icon orange">📋</div>
+          <div>
+            <div class="stat-num" id="st-submitted">0</div>
+            <div class="stat-label">已投稿</div>
+          </div>
+        </div>
+        <div class="stat-card" id="sc-paid" onclick="switchType('paid')">
+          <div class="stat-icon green">💰</div>
+          <div>
+            <div class="stat-num" id="st-paid">0</div>
+            <div class="stat-label">已缴费</div>
+          </div>
+        </div>
+        <div class="stat-card" id="sc-finished" onclick="switchType('finished')">
+          <div class="stat-icon teal">✅</div>
+          <div>
+            <div class="stat-num" id="st-finished">0</div>
+            <div class="stat-label">已结项</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 表格 -->
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>客户</th>
+              <th>联系方式</th>
+              <th>单位 / 职称</th>
+              <th>关联会议/期刊</th>
+              <th>状态</th>
+              <th>跟进</th>
+              <th>更新时间</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+        <div id="table-empty" class="empty" style="display:none;">
+          <div class="empty-illustration">🔍</div>
+          <div class="empty-title">暂无客户数据</div>
+          <div class="empty-hint">点击右上角「添加客户」开始录入</div>
+        </div>
+        <div class="pagination" id="pagination" style="display:none;">
+          <span id="pag-info">共 0 条</span>
+          <div class="page-btns" id="pag-btns"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ══════ 详情抽屉 ══════ -->
+<div class="drawer-mask" id="drawer-mask" onclick="closeDrawer()"></div>
+<div class="drawer" id="detail-drawer">
+  <div class="drawer-header">
+    <div class="drawer-title" id="drawer-title">客户详情</div>
+    <span class="drawer-close" onclick="closeDrawer()">×</span>
+  </div>
+  <div class="drawer-body" id="drawer-body"></div>
+  <div class="drawer-footer">
+    <button class="btn btn-outline" onclick="openEditModal(currentDetailId)">✏️ 编辑信息</button>
+    <button class="btn btn-outline" onclick="addFollowUI(currentDetailId)">💬 添加跟进</button>
+    <div style="flex:1;"></div>
+    <button class="btn btn-danger btn-sm" onclick="deleteCustomerUI(currentDetailId)">删除</button>
+  </div>
+</div>
+
+<!-- ══════ 添加/编辑弹窗 ══════ -->
+<div class="modal-mask" id="form-modal-mask" onclick="closeFormOnMask(event)">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="form-modal-title">添加客户</div>
+      <span class="modal-close" onclick="closeFormModal()">×</span>
+    </div>
+    <div class="modal-body">
+      <form autocomplete="off" style="display:contents;">
+      <div class="form-section-title">基本信息</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">姓名 <span class="req">*</span></label>
+          <input class="form-input" id="f-name" placeholder="请输入客户姓名" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">联系电话 <span class="req">*</span></label>
+          <input class="form-input" id="f-phone" type="tel" placeholder="手机号码" maxlength="11" />
+        </div>
+        <div class="form-group span2">
+          <label class="form-label">电子邮箱</label>
+          <input class="form-input" id="f-email" type="email" placeholder="请输入邮箱地址" />
+        </div>
+      </div>
+
+      <div class="form-section-title">职业信息</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">工作单位</label>
+          <input class="form-input" id="f-company" placeholder="学校/医院/研究所等" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">职称/职务</label>
+          <input class="form-input" id="f-title" placeholder="教授/讲师/主任等" />
+        </div>
+        <div class="form-group span2">
+          <label class="form-label">研究方向</label>
+          <input class="form-input" id="f-research" placeholder="如：人工智能、医学影像等" />
+        </div>
+      </div>
+
+      <div class="form-section-title">合作信息</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">客户类型</label>
+          <select class="form-select" id="f-type">
+            <option value="conference">会议客户</option>
+            <option value="journal">期刊客户</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">客户订单号</label>
+          <input class="form-input" id="f-orderno" placeholder="自动生成" inputmode="text" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" id="f-conf-label">关联会议</label>
+          <input class="form-input" id="f-conference" placeholder="如：ICDLA 2026" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">客户状态</label>
+          <select class="form-select" id="f-status">
+            <option value="contacted">已投稿</option>
+            <option value="signed">已缴费</option>
+            <option value="completed">已结项</option>
+          </select>
+        </div>
+        <div class="form-group span2">
+          <label class="form-label">备注</label>
+          <textarea class="form-textarea" id="f-remarks" placeholder="其他备注信息…"></textarea>
+        </div>
+      </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeFormModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveCustomer()">保存客户</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ 小弹窗 ══════ -->
+<div class="mini-modal-mask" id="mini-mask" onclick="closeMiniOnMask(event)">
+  <div class="mini-box">
+    <div class="mini-title" id="mini-title"></div>
+    <div class="mini-content" id="mini-content"></div>
+    <textarea class="mini-textarea" id="mini-textarea" style="display:none;" placeholder="请输入内容…"></textarea>
+    <div class="mini-btns" id="mini-btns"></div>
+  </div>
+</div>
+
+<!-- 隐藏导入 -->
+<input type="file" id="file-input" accept=".json" style="display:none;" onchange="handleFileImport(this)" />
+
+<!-- 全局 Loading 遮罩 -->
+<div class="loading-mask" id="loading-mask">
+  <div class="loading-spinner" id="loading-spinner">处理中...</div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  Supabase 配置（纯 fetch，无 SDK 依赖）
+// ═══════════════════════════════════════════════════
+const SB_URL = 'https://zpfmcizicdvujupjzihg.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwZm1jaXppY2R2dWp1cGp6aWhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1OTk0NzksImV4cCI6MjA5MjE3NTQ3OX0.pCcNTXjK4DkB29cbB2eVhpDdE6_EevSS9JSfeW874mw';
+const SB_HEADERS = { 'apikey': SB_KEY, 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY };
+
+let currentUser = null;
+let accessToken = '';
+
+// ═══════════════════════════════════════════════════
+//  Supabase REST API 封装
+// ═══════════════════════════════════════════════════
+async function sbFetch(path, options = {}) {
+  const headers = { ...SB_HEADERS };
+  if (accessToken) headers['Authorization'] = 'Bearer ' + accessToken;
+  const res = await fetch(SB_URL + path, { ...options, headers });
+  if (res.status === 204 || res.headers.get('content-length') === '0') return null;
+  const json = await res.json();
+  return json;
+}
+
+// ═══════════════════════════════════════════════════
+//  认证（调 Supabase Auth REST API）
+// ═══════════════════════════════════════════════════
+async function sbSignUp(email, password) {
+  const res = await fetch(SB_URL + '/auth/v1/signup', {
+    method: 'POST',
+    headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  return await res.json();
+}
+
+async function sbSignIn(email, password) {
+  const res = await fetch(SB_URL + '/auth/v1/token?grant_type=password', {
+    method: 'POST',
+    headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  return await res.json();
+}
+
+async function sbGetSession() {
+  const rt = localStorage.getItem('sb_rt_' + SB_URL.replace('https://', ''));
+  if (!rt) return null;
+  try {
+    const res = await fetch(SB_URL + '/auth/v1/token?grant_type=refresh_token', {
+      method: 'POST',
+      headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: rt })
+    });
+    const json = await res.json();
+    if (json.access_token) {
+      accessToken = json.access_token;
+      localStorage.setItem('sb_at_' + SB_URL.replace('https://', ''), json.access_token);
+      localStorage.setItem('sb_rt_' + SB_URL.replace('https://', ''), json.refresh_token);
+      return json.user;
+    }
+  } catch(e) {}
+  return null;
+}
+
+async function sbSignOut() {
+  localStorage.removeItem('sb_at_' + SB_URL.replace('https://', ''));
+  localStorage.removeItem('sb_rt_' + SB_URL.replace('https://', ''));
+  accessToken = '';
+  currentUser = null;
+}
+
+// ═══════════════════════════════════════════════════
+//  初始化
+// ═══════════════════════════════════════════════════
+async function initApp() {
+  showAuth();
+  const user = await sbGetSession();
+  if (user) {
+    currentUser = user;
+    showApp();
+  }
+}
+
+function showAuth() {
+  document.getElementById('auth-page').style.display = 'flex';
+  document.getElementById('app').classList.remove('show');
+}
+
+function showApp() {
+  document.getElementById('auth-page').style.display = 'none';
+  document.getElementById('app').classList.add('show');
+  updateUserInfo();
+  render();
+}
+
+function updateUserInfo() {
+  if (!currentUser) return;
+  const email = currentUser.email || 'User';
+  document.getElementById('user-email').textContent = email;
+  document.getElementById('user-avatar').textContent = email.charAt(0).toUpperCase();
+}
+
+// ═══════════════════════════════════════════════════
+//  登录/注册
+// ═══════════════════════════════════════════════════
+async function handleAuth() {
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const btn = document.getElementById('auth-btn');
+  const errorEl = document.getElementById('auth-error');
+  
+  if (!email || !password) { showAuthError('请输入邮箱和密码'); return; }
+  if (password.length < 6) { showAuthError('密码至少需要6位'); return; }
+  
+  btn.disabled = true;
+  btn.textContent = '处理中...';
+  errorEl.classList.remove('show');
+  
+  try {
+    // 先尝试登录
+    let json = await sbSignIn(email, password);
+    
+    if (json.error || !json.access_token) {
+      // 登录失败，尝试注册
+      json = await sbSignUp(email, password);
+      
+      if (json.error) {
+        let msg = '注册失败';
+        if (json.msg) msg = json.msg;
+        if (json.error_description) msg = json.error_description;
+        if (json.error && json.error.message) msg = json.error.message;
+        showAuthError(msg);
+        btn.disabled = false;
+        btn.textContent = '登录 / 注册';
+        return;
+      }
+      
+      // 注册成功，Supabase 默认需要邮箱验证
+      showAuthError('注册成功！请去邮箱查收验证邮件，验证后即可登录。');
+      btn.disabled = false;
+      btn.textContent = '登录 / 注册';
+      return;
+    }
+    
+    // 登录成功
+    accessToken = json.access_token;
+    currentUser = json.user;
+    localStorage.setItem('sb_at_' + SB_URL.replace('https://', ''), json.access_token);
+    localStorage.setItem('sb_rt_' + SB_URL.replace('https://', ''), json.refresh_token);
+    showApp();
+    
+  } catch (e) {
+    showAuthError('网络错误，请检查网络连接后重试');
+    btn.disabled = false;
+    btn.textContent = '登录 / 注册';
+  }
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+async function logout() {
+  await sbSignOut();
+  showAuth();
+}
+
+// ═══════════════════════════════════════════════════
+//  数据层 - Supabase REST API
+// ═══════════════════════════════════════════════════
+async function loadCustomers() {
+  if (!currentUser) return [];
+  try {
+    const json = await sbFetch('/rest/v1/customers?user_id=eq.' + currentUser.id + '&order=update_time.desc');
+    const list = json || [];
+    // 自动迁移旧状态值并同步到数据库
+    let migrated = false;
+    for (const c of list) {
+      if (STATUS_MIGRATE[c.status]) {
+        const newStatus = STATUS_MIGRATE[c.status];
+        try { await updateCustomer(c.id, { status: newStatus }); } catch(e) {}
+        c.status = newStatus;
+        migrated = true;
+      }
+    }
+    if (migrated) {
+      // 重载确保数据一致
+      const reloaded = await sbFetch('/rest/v1/customers?user_id=eq.' + currentUser.id + '&order=update_time.desc');
+      return reloaded || list;
+    }
+    return list;
+  } catch(e) { toast('加载数据失败'); return []; }
+}
+
+async function loadFollowRecords(customerId) {
+  try {
+    const json = await sbFetch('/rest/v1/follow_records?customer_id=eq.' + customerId + '&order=date.desc');
+    return json || [];
+  } catch(e) { toast('加载跟进记录失败'); return []; }
+}
+
+async function createCustomer(data) {
+  const customer = {
+    id: Date.now().toString(),
+    user_id: currentUser.id,
+    name: data.name,
+    phone: data.phone,
+    email: data.email,
+    company: data.company,
+    title: data.title,
+    research: data.research,
+    order_no: data.orderNo,
+    conference: data.conference,
+    status: data.status,
+    type: data.type,
+    remarks: data.remarks,
+    create_time: now(),
+    update_time: now()
+  };
+  try {
+    const res = await sbFetch('/rest/v1/customers', { method: 'POST', body: JSON.stringify(customer) });
+    if (res && res.length === undefined && !res.code) return customer;
+    if (res && res.msg) { toast('保存失败: ' + res.msg); return null; }
+    return customer;
+  } catch(e) { toast('保存失败'); return null; }
+}
+
+async function updateCustomer(id, data) {
+  // 只传实际传入的字段，避免未传入的字段被清空
+  const cloudData = { update_time: now() };
+  if (data.name !== undefined) cloudData.name = data.name;
+  if (data.phone !== undefined) cloudData.phone = data.phone;
+  if (data.email !== undefined) cloudData.email = data.email;
+  if (data.company !== undefined) cloudData.company = data.company;
+  if (data.title !== undefined) cloudData.title = data.title;
+  if (data.research !== undefined) cloudData.research = data.research;
+  if (data.orderNo !== undefined) cloudData.order_no = data.orderNo;
+  if (data.conference !== undefined) cloudData.conference = data.conference;
+  if (data.status !== undefined) cloudData.status = data.status;
+  if (data.type !== undefined) cloudData.type = data.type;
+  if (data.remarks !== undefined) cloudData.remarks = data.remarks;
+  try {
+    await sbFetch('/rest/v1/customers?id=eq.' + id, { method: 'PATCH', body: JSON.stringify(cloudData) });
+    // 同步更新本地数据
+    const c = allCustomers.find(x => x.id === id);
+    if (c) Object.assign(c, data);
+    return true;
+  } catch(e) { toast('更新失败'); return false; }
+}
+
+async function deleteCustomer(id) {
+  try {
+    // 先删跟进记录
+    await fetch(SB_URL + '/rest/v1/follow_records?customer_id=eq.' + id, {
+      method: 'DELETE',
+      headers: { ...SB_HEADERS, 'Authorization': 'Bearer ' + accessToken }
+    });
+    // 再删客户
+    const res = await fetch(SB_URL + '/rest/v1/customers?id=eq.' + id, {
+      method: 'DELETE',
+      headers: { ...SB_HEADERS, 'Authorization': 'Bearer ' + accessToken }
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      toast('删除失败: ' + (text || res.status));
+      return false;
+    }
+    return true;
+  } catch(e) { toast('删除失败: ' + (e.message || '网络错误')); return false; }
+}
+
+async function addFollowRecord(customerId, content) {
+  const record = {
+    id: Date.now().toString(),
+    customer_id: customerId,
+    content: content,
+    date: nowFull()
+  };
+  try {
+    await sbFetch('/rest/v1/follow_records', { method: 'POST', body: JSON.stringify(record) });
+    return record;
+  } catch(e) { toast('添加失败'); return null; }
+}
+
+// ═══════════════════════════════════════════════════
+//  工具
+// ═══════════════════════════════════════════════════
+const p2 = n => String(n).padStart(2,'0');
+function now() { const d=new Date(); return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`; }
+function nowFull() { const d=new Date(); return `${now()} ${p2(d.getHours())}:${p2(d.getMinutes())}`; }
+function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
+
+// 与 conference-progress 保持一致的状态值
+const STATUS = { contacted:'已投稿', signed:'已缴费', completed:'已结项' };
+const BADGE_CLASS = { contacted:'badge-submitted', signed:'badge-paid', completed:'badge-closed' };
+const STATUS_SEL_CLASS = { contacted:'contacted', signed:'signed', completed:'completed' };
+// 旧状态值兼容映射（旧 DB 值 → 新值，与 conference-progress 同步）
+const STATUS_MIGRATE = { submitted:'contacted', paid:'signed', finished:'completed' };
+
+// ═══════════════════════════════════════════════════
+//  全局状态
+// ═══════════════════════════════════════════════════
+let g = { type:'all', status:'all', kw:'', page:1, pageSize:15, editingId:null };
+let currentDetailId = null;
+let allCustomers = [];
+
+// ═══════════════════════════════════════════════════
+//  Toast
+// ═══════════════════════════════════════════════════
+let _toastT;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(_toastT); _toastT = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ═══════════════════════════════════════════════════
+//  Loading 工具
+// ═══════════════════════════════════════════════════
+function showLoading(msg) {
+  document.getElementById('loading-spinner').textContent = msg || '处理中...';
+  document.getElementById('loading-mask').classList.add('show');
+}
+function hideLoading() {
+  document.getElementById('loading-mask').classList.remove('show');
+}
+// 给按钮加 loading 状态，返回取消函数
+function btnLoading(btn, originalText) {
+  btn.classList.add('loading');
+  if (originalText) btn._originalText = originalText;
+  return () => { btn.classList.remove('loading'); };
+}
+
+// ═══════════════════════════════════════════════════
+//  mini 弹窗
+// ═══════════════════════════════════════════════════
+let _miniResolve;
+function miniModal({ title, content='', confirm='确定', cancel='取消', showCancel=true, showTA=false, danger=false }) {
+  return new Promise(res => {
+    _miniResolve = res;
+    document.getElementById('mini-title').textContent = title;
+    document.getElementById('mini-content').innerHTML = content;
+    const ta = document.getElementById('mini-textarea');
+    if (showTA) { ta.style.display='block'; ta.value=''; } else { ta.style.display='none'; }
+    const btns = document.getElementById('mini-btns');
+    btns.innerHTML = '';
+    if (showCancel) {
+      const b = document.createElement('button');
+      b.className='btn btn-ghost'; b.textContent=cancel;
+      b.onclick=() => { closeMini(); res({ ok:false }); }; btns.appendChild(b);
+    }
+    const b2 = document.createElement('button');
+    b2.className = danger ? 'btn btn-danger' : 'btn btn-primary';
+    b2.textContent = confirm;
+    b2.onclick=() => { const v=showTA?ta.value:null; closeMini(); res({ ok:true, val:v }); };
+    btns.appendChild(b2);
+    document.getElementById('mini-mask').classList.add('open');
+    if (showTA) setTimeout(() => ta.focus(), 150);
+  });
+}
+function closeMini() { document.getElementById('mini-mask').classList.remove('open'); }
+function closeMiniOnMask(e) { if (e.target===document.getElementById('mini-mask')) { closeMini(); if (_miniResolve) { _miniResolve({ok:false}); _miniResolve=null; } } }
+
+// ═══════════════════════════════════════════════════
+//  主渲染
+// ═══════════════════════════════════════════════════
+async function render() {
+  if (!currentUser) return;
+  
+  // 加载数据
+  allCustomers = await loadCustomers();
+  
+  const confCnt = allCustomers.filter(c=>c.type==='conference').length;
+  const jourCnt = allCustomers.filter(c=>c.type==='journal').length;
+
+  // 侧边栏计数
+  document.getElementById('nc-conf').textContent = confCnt;
+  document.getElementById('nc-jour').textContent = jourCnt;
+  document.getElementById('nc-all').textContent = confCnt + jourCnt;
+
+  // 侧边栏激活
+  const sub = document.getElementById('nav-sub');
+  const parent = document.getElementById('nav-all');
+  const isSubOpen = g.type === 'conference' || g.type === 'journal';
+  parent.className = 'nav-item nav-parent' + (g.type==='all' ? ' active' : '') + (isSubOpen ? ' open' : '');
+  sub.className = 'nav-sub' + (isSubOpen ? ' open' : '');
+  document.getElementById('nav-conference').className = 'nav-item' + (g.type==='conference' ? ' active' : '');
+  document.getElementById('nav-journal').className = 'nav-item' + (g.type==='journal' ? ' active' : '');
+
+  // 页面标题
+  const titleMap = { all:'全部客户', conference:'会议客户', journal:'期刊客户', paid:'已缴费' };
+  document.getElementById('page-title').textContent = titleMap[g.type] || '全部客户';
+
+  // 过滤数据
+  let data;
+  if (g.type === 'paid' || g.type === 'submitted' || g.type === 'finished') {
+    data = allCustomers.filter(c=>c.status===g.type);
+  } else {
+    data = g.type==='all' ? [...allCustomers] : allCustomers.filter(c=>c.type===g.type);
+    if (g.status !== 'all') data = data.filter(c=>c.status===g.status);
+  }
+  const typeCnt = data.length;
+  if (g.kw) {
+    const kw = g.kw.toLowerCase();
+    data = data.filter(c=>
+      (c.name||'').toLowerCase().includes(kw) ||
+      (c.phone||'').includes(kw) ||
+      (c.company||'').toLowerCase().includes(kw) ||
+      (c.order_no||'').toLowerCase().includes(kw)
+    );
+  }
+
+  // 排序
+  const sort = document.getElementById('sort-select').value;
+  if (sort==='name_asc') data.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  else if (sort==='createTime_desc') data.sort((a,b)=>(b.create_time||'').localeCompare(a.create_time||''));
+  else if (sort==='signed_first') data.sort((a,b)=>(a.status==='paid'?-1:b.status==='paid'?1:0));
+  else data.sort((a,b)=>(b.update_time||'').localeCompare(a.update_time||''));
+
+  // 统计卡片
+  document.getElementById('st-total').textContent = allCustomers.length;
+  document.getElementById('st-conference').textContent = allCustomers.filter(c=>c.type==='conference').length;
+  document.getElementById('st-journal').textContent = allCustomers.filter(c=>c.type==='journal').length;
+  document.getElementById('st-paid').textContent = allCustomers.filter(c=>c.status==='paid').length;
+  document.getElementById('st-submitted').textContent = allCustomers.filter(c=>c.status==='submitted').length;
+  document.getElementById('st-finished').textContent = allCustomers.filter(c=>c.status==='finished').length;
+
+  // 统计卡片高亮
+  ['sc-all','sc-conference','sc-journal','sc-paid','sc-submitted','sc-finished'].forEach(id => document.getElementById(id).classList.remove('active'));
+  const cardMap = { all:'sc-all', conference:'sc-conference', journal:'sc-journal', paid:'sc-paid', submitted:'sc-submitted', finished:'sc-finished' };
+  if (cardMap[g.type]) document.getElementById(cardMap[g.type]).classList.add('active');
+
+  // 分页
+  const total = data.length;
+  const totalPages = Math.max(1, Math.ceil(total / g.pageSize));
+  if (g.page > totalPages) g.page = totalPages;
+  const start = (g.page-1)*g.pageSize;
+  const pageData = data.slice(start, start+g.pageSize);
+
+  document.getElementById('page-count').textContent = `${total} 位客户`;
+
+  // 表格
+  const tbody = document.getElementById('table-body');
+  const empty = document.getElementById('table-empty');
+
+  if (data.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    empty.querySelector('.empty-title').textContent = g.kw ? '未找到匹配的客户' : '暂无客户数据';
+    empty.querySelector('.empty-hint').textContent = g.kw ? '请换个关键词试试' : '点击右上角「添加客户」开始录入';
+  } else {
+    empty.style.display = 'none';
+    tbody.innerHTML = pageData.map(c => `
+      <tr onclick="openDetail('${c.id}')">
+        <td>
+          <div class="td-name">${esc(c.name)}</div>
+          <div class="td-sub">${esc(c.order_no)}</div>
+        </td>
+        <td>
+          <div class="td-phone" onclick="event.stopPropagation();copyText('${esc(c.phone)}','电话已复制')">${esc(c.phone)}</div>
+          ${c.email ? `<div class="td-sub" style="cursor:pointer;" onclick="event.stopPropagation();copyText('${esc(c.email)}','邮箱已复制')">${esc(c.email)}</div>` : ''}
+        </td>
+        <td>
+          <div>${esc(c.company)}</div>
+          ${c.title ? `<div class="td-sub">${esc(c.title)}</div>` : ''}
+        </td>
+        <td>${esc(c.conference) || '<span style="color:#d1d5db;">—</span>'}</td>
+        <td><span class="badge ${BADGE_CLASS[c.status]||''}">${STATUS[c.status]||c.status}</span></td>
+        <td><span style="color:var(--brand);">加载中...</span></td>
+        <td style="color:var(--text-muted);">${c.update_time||''}</td>
+        <td>
+          <div class="td-actions">
+            <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openEditModal('${c.id}')">编辑</button>
+            <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteCustomerUI('${c.id}')">删除</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+    
+    // 异步加载跟进记录数
+    pageData.forEach(async c => {
+      const records = await loadFollowRecords(c.id);
+      const el = tbody.querySelector(`tr[onclick*="'${c.id}'"] td:nth-child(6) span`);
+      if (el) el.textContent = `${records.length} 条`;
+    });
+  }
+
+  // 分页控件
+  const pag = document.getElementById('pagination');
+  if (total > g.pageSize) {
+    pag.style.display = 'flex';
+    document.getElementById('pag-info').textContent = `共 ${total} 条，第 ${g.page}/${totalPages} 页`;
+    const btns = document.getElementById('pag-btns');
+    btns.innerHTML = '';
+    const addPageBtn = (label, page, active=false, disabled=false) => {
+      const b = document.createElement('button');
+      b.className='page-btn'+(active?' active':''); b.textContent=label;
+      b.disabled=disabled;
+      if (!disabled&&!active) b.onclick=()=>{ g.page=page; render(); };
+      btns.appendChild(b);
+    };
+    addPageBtn('‹', g.page-1, false, g.page===1);
+    const pages = buildPageRange(g.page, totalPages);
+    pages.forEach(p => {
+      if (p==='…') { const s=document.createElement('span'); s.textContent='…'; s.style.cssText='padding:0 6px;color:var(--text-muted);line-height:32px;'; btns.appendChild(s); }
+      else addPageBtn(p, p, p===g.page);
+    });
+    addPageBtn('›', g.page+1, false, g.page===totalPages);
+  } else {
+    pag.style.display = 'none';
+  }
+}
+
+function buildPageRange(cur, total) {
+  if (total <= 7) return Array.from({length:total},(_,i)=>i+1);
+  const r = [];
+  if (cur <= 4) { for(let i=1;i<=5;i++) r.push(i); r.push('…'); r.push(total); }
+  else if (cur >= total-3) { r.push(1); r.push('…'); for(let i=total-4;i<=total;i++) r.push(i); }
+  else { r.push(1); r.push('…'); for(let i=cur-1;i<=cur+1;i++) r.push(i); r.push('…'); r.push(total); }
+  return r;
+}
+
+function renderTable() { render(); }
+
+// ═══════════════════════════════════════════════════
+//  交互
+// ═══════════════════════════════════════════════════
+function switchType(type) { g.type=type; g.status='all'; g.kw=''; g.page=1; document.getElementById('search-input').value=''; document.getElementById('clear-x').style.display='none'; render(); }
+function toggleNavSub() {
+  const sub = document.getElementById('nav-sub');
+  const parent = document.getElementById('nav-all');
+  sub.classList.toggle('open');
+  parent.classList.toggle('open');
+  // 点击全部客户时也切换到 all 视图
+  if (g.type !== 'all') { g.type='all'; g.status='all'; render(); }
+}
+function setStatus(s) { g.status=s; g.page=1; render(); }
+function onSearch(v) { g.kw=v; g.page=1; document.getElementById('clear-x').style.display=v?'block':'none'; render(); }
+function clearSearch() { g.kw=''; document.getElementById('search-input').value=''; document.getElementById('clear-x').style.display='none'; render(); }
+
+// ═══════════════════════════════════════════════════
+//  详情抽屉
+// ═══════════════════════════════════════════════════
+async function openDetail(id) {
+  currentDetailId = id;
+  await renderDrawer(id);
+  document.getElementById('detail-drawer').classList.add('open');
+  document.getElementById('drawer-mask').classList.add('open');
+}
+function closeDrawer() {
+  document.getElementById('detail-drawer').classList.remove('open');
+  document.getElementById('drawer-mask').classList.remove('open');
+  currentDetailId = null;
+}
+async function renderDrawer(id) {
+  const c = allCustomers.find(x => x.id === id); if (!c) return;
+  console.log('跟进调试 - customer id:', id, ', type:', typeof id);
+  const records = await loadFollowRecords(id);
+  console.log('跟进调试 - 查到记录数:', records.length, ', 记录:', records);
+  document.getElementById('drawer-title').textContent = `${c.name} 的详情`;
+
+  const isConf = c.type === 'conference';
+  const kvRows = [
+    ['客户类型', isConf ? '🎓 会议客户' : '📖 期刊客户', false],
+    ['订单号', c.order_no, true],
+    ['联系电话', c.phone, true],
+    c.email ? ['邮箱', c.email, true] : null,
+    c.company ? ['工作单位', c.company, false] : null,
+    c.title ? ['职称/职务', c.title, false] : null,
+    c.research ? ['研究方向', c.research, false] : null,
+    c.conference ? [isConf?'关联会议':'意向期刊', c.conference, false] : null,
+    c.remarks ? ['备注', c.remarks, false] : null,
+  ].filter(Boolean);
+
+  const kvHTML = kvRows.map(([k,v,cp]) =>
+    `<div class="kv-key">${k}</div><div class="kv-val${cp?' copyable':''}" ${cp?`onclick="copyText('${esc(v)}','${k}已复制')"`:''} title="${cp?'点击复制':''}">${esc(v)}</div>`
+  ).join('');
+
+  const followHTML = records.length > 0
+    ? records.map(r=>`
+      <div class="tl-item">
+        <div class="tl-dot"></div>
+        <div class="tl-body">
+          <div class="tl-text">${esc(r.content)}</div>
+          <div class="tl-date">${r.date}</div>
+        </div>
+      </div>`).join('')
+    : '<div class="no-follow">暂无跟进记录</div>';
+
+  document.getElementById('drawer-body').innerHTML = `
+    <div class="detail-hero">
+      <div class="avatar">${esc((c.name||'?').substr(0,1))}</div>
+      <div style="flex:1;">
+        <div class="hero-name">${esc(c.name)}</div>
+        <div class="hero-meta">
+          <select class="status-select ${STATUS_SEL_CLASS[c.status]||''}" onchange="onStatusChange('${c.id}',this.value)">
+            <option value="contacted" ${c.status==='contacted'?'selected':''}>已投稿</option>
+            <option value="signed" ${c.status==='signed'?'selected':''}>已缴费</option>
+            <option value="completed" ${c.status==='completed'?'selected':''}>已结项</option>
+          </select>
+          ${c.create_time ? `<span style="font-size:12px;color:var(--text-muted);">创建于 ${c.create_time}</span>` : ''}
+        </div>
+      </div>
+    </div>
+
+    <div class="section-block">
+      <div class="section-block-title">客户信息</div>
+      <div class="kv-grid">${kvHTML}</div>
+    </div>
+
+    <div class="section-block">
+      <div class="section-block-title">跟进记录 · ${records.length} 条</div>
+      <div class="timeline">${followHTML}</div>
+    </div>
+  `;
+}
+
+async function onStatusChange(id, status) {
+  showLoading('更新状态中...');
+  try {
+    const ok = await updateCustomer(id, { status });
+    if (!ok) { toast('❌ 状态更新失败'); return; }
+    await renderDrawer(id);
+    render();
+    toast('✅ 状态已更新，已同步云端');
+  } finally { hideLoading(); }
+}
+
+async function addFollowUI(id) {
+  const r = await miniModal({ title:'添加跟进记录', showTA:true, confirm:'添加', content:'' });
+  if (!r.ok || !r.val || !r.val.trim()) return;
+  showLoading('保存跟进记录中...');
+  try {
+    const rec = await addFollowRecord(id, r.val.trim());
+    if (!rec) { toast('❌ 跟进记录添加失败'); return; }
+    await renderDrawer(id);
+    render();
+    toast('✅ 跟进记录已添加，已同步云端');
+  } finally { hideLoading(); }
+}
+
+async function deleteCustomerUI(id) {
+  const c = allCustomers.find(x => x.id === id); if (!c) return;
+  const r = await miniModal({ title:'删除客户', content:`确定要删除「${c.name}」吗？此操作不可恢复。`, confirm:'删除', danger:true });
+  if (!r.ok) return;
+  showLoading('删除中...');
+  try {
+    const ok = await deleteCustomer(id);
+    if (!ok) return;
+    if (currentDetailId===id) closeDrawer();
+    allCustomers = allCustomers.filter(x => x.id !== id);
+    render();
+    toast('✅ 已删除，已同步云端');
+  } finally { hideLoading(); }
+}
+
+// ═══════════════════════════════════════════════════
+//  添加 / 编辑弹窗
+// ═══════════════════════════════════════════════════
+function openAddModal() {
+  g.editingId = null;
+  const typeLabel = g.type==='conference' ? '会议' : g.type==='journal' ? '期刊' : '';
+  document.getElementById('form-modal-title').textContent = `添加${typeLabel}客户`;
+  const fields = ['f-name','f-phone','f-email','f-company','f-title','f-research','f-orderno','f-conference','f-remarks'];
+  fields.forEach(id => { document.getElementById(id).value=''; });
+  document.getElementById('f-status').value = 'submitted';
+  document.getElementById('f-orderno').value = '';
+  // 类型选择器：全部客户模式下显示并默认选会议，其他模式下隐藏
+  const typeSelect = document.getElementById('f-type');
+  if (g.type === 'all') {
+    typeSelect.style.display = '';
+    typeSelect.value = 'conference';
+  } else {
+    typeSelect.style.display = 'none';
+    typeSelect.value = g.type;
+  }
+  document.getElementById('f-conf-label').textContent = g.type==='journal' ? '意向期刊' : '关联会议';
+  document.getElementById('f-conference').placeholder = g.type==='journal' ? '如：SCI期刊、EI期刊' : '如：ICDLA 2026';
+  document.getElementById('form-modal-mask').classList.add('open');
+  setTimeout(() => document.getElementById('f-name').focus(), 150);
+}
+
+function openEditModal(id) {
+  const c = allCustomers.find(x => x.id === id); if (!c) return;
+  g.editingId = id;
+  g.editingType = c.type || 'conference'; // 记住原始类型
+  document.getElementById('form-modal-title').textContent = '编辑客户信息';
+  document.getElementById('f-name').value = c.name||'';
+  document.getElementById('f-phone').value = c.phone||'';
+  document.getElementById('f-email').value = c.email||'';
+  document.getElementById('f-company').value = c.company||'';
+  document.getElementById('f-title').value = c.title||'';
+  document.getElementById('f-research').value = c.research||'';
+  document.getElementById('f-orderno').value = c.order_no||'';
+  document.getElementById('f-conference').value = c.conference||'';
+  document.getElementById('f-status').value = c.status||'submitted';
+  document.getElementById('f-remarks').value = c.remarks||'';
+  const isConf = c.type==='conference';
+  document.getElementById('f-conf-label').textContent = isConf ? '关联会议' : '意向期刊';
+  document.getElementById('f-conference').placeholder = isConf ? '如：ICDLA 2026' : '如：SCI期刊、EI期刊';
+  document.getElementById('form-modal-mask').classList.add('open');
+  setTimeout(() => document.getElementById('f-name').focus(), 150);
+}
+
+function closeFormModal() { document.getElementById('form-modal-mask').classList.remove('open'); }
+function closeFormOnMask(e) { if (e.target===document.getElementById('form-modal-mask')) closeFormModal(); }
+
+async function saveCustomer() {
+  const name = document.getElementById('f-name').value.trim();
+  const phone = document.getElementById('f-phone').value.trim();
+  const email = document.getElementById('f-email').value.trim();
+  if (!name) { toast('请输入客户姓名'); return; }
+  if (!phone) { toast('请输入联系电话'); return; }
+  if (!/^1[3-9]\d{9}$/.test(phone)) { toast('请输入正确的手机号'); return; }
+  if (email && !/[\w.\-]+@[\w.\-]+\.\w+/.test(email)) { toast('请输入正确的邮箱'); return; }
+
+  // 防止重复点击
+  const saveBtn = document.querySelector('.modal-footer .btn-primary');
+  if (saveBtn.classList.contains('loading')) return;
+  const done = btnLoading(saveBtn, '保存客户');
+
+  try {
+    const data = {
+      name, phone, email,
+      company: document.getElementById('f-company').value.trim(),
+      title: document.getElementById('f-title').value.trim(),
+      research: document.getElementById('f-research').value.trim(),
+      orderNo: document.getElementById('f-orderno').value.trim(),
+      conference: document.getElementById('f-conference').value.trim(),
+      status: document.getElementById('f-status').value,
+      remarks: document.getElementById('f-remarks').value.trim()
+    };
+
+    if (g.editingId) {
+      data.type = g.editingType || 'conference'; // 编辑时保留原始类型
+      const ok = await updateCustomer(g.editingId, data);
+      toast(ok ? '✅ 修改成功，已同步云端' : '❌ 修改失败，请重试');
+      if (ok && currentDetailId===g.editingId) await renderDrawer(g.editingId);
+    } else {
+      data.type = (g.type === 'all' || g.type === 'paid') ? document.getElementById('f-type').value : g.type;
+      const c = await createCustomer(data);
+      toast(c ? '✅ 添加成功，已同步云端' : '❌ 添加失败，请重试');
+    }
+    closeFormModal();
+    render();
+  } finally { done(); }
+}
+
+// ═══════════════════════════════════════════════════
+//  导出 / 导入
+// ═══════════════════════════════════════════════════
+async function doExportCSV() {
+  if (!allCustomers.length) { toast('暂无数据可导出'); return; }
+  const ST = { submitted:'已投稿', paid:'已缴费', finished:'已结项' };
+  const TY = { conference:'会议客户', journal:'期刊客户' };
+
+  function csvCell(v) {
+    if (v === null || v === undefined) return '';
+    const s = String(v);
+    if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\t')) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+  }
+
+  const headers = ['序号','客户类型','订单号','姓名','电话','邮箱','工作单位','职称','研究方向','关联会议/期刊','客户状态','创建时间','更新时间','备注'];
+  let s = headers.map(csvCell).join(',') + '\n';
+
+  allCustomers.forEach((c, i) => {
+    const row = [
+      i + 1,
+      TY[c.type] || '',
+      csvCell(c.order_no || ''),
+      csvCell(c.name || ''),
+      csvCell(c.phone || ''),
+      csvCell(c.email || ''),
+      csvCell(c.company || ''),
+      csvCell(c.title || ''),
+      csvCell(c.research || ''),
+      csvCell(c.conference || ''),
+      ST[c.status] || '',
+      csvCell(c.create_time || ''),
+      csvCell(c.update_time || ''),
+      csvCell((c.remarks || '').replace(/\n/g, ' '))
+    ];
+    s += row.join(',') + '\n';
+  });
+
+  const d = new Date();
+  const fn = `客户资料_${d.getFullYear()}${p2(d.getMonth()+1)}${p2(d.getDate())}.csv`;
+  showLoading('正在导出...');
+  try {
+    dl('\ufeff' + s, fn, 'text/csv;charset=utf-8;');
+    toast('✅ Excel 已下载');
+  } finally { hideLoading(); }
+}
+
+async function doExportJSON() {
+  if (!allCustomers.length) { toast('暂无数据'); return; }
+  showLoading('正在备份...');
+  try {
+    // 加载所有跟进记录
+    // 注意：allCustomers 中的 status 是映射后的值（submitted/paid/finished），
+    // 这里导出时直接用映射后的值（与 conference-progress 的导入映射对应）
+    const exportData = [];
+    for (const c of allCustomers) {
+      const records = await loadFollowRecords(c.id);
+      exportData.push({ ...c, followRecords: records });
+    }
+    const d=new Date(); const fn=`备份客户数据_${exportData.length}条_${now()}.json`;
+    dl(JSON.stringify({version:'2.0-cloud',backupTime:nowFull(),customerCount:exportData.length,customers:exportData},null,2), fn, 'application/json');
+    toast('✅ 备份已下载');
+  } finally { hideLoading(); }
+}
+
+function dl(content, filename, type) {
+  const b=new Blob([content],{type}); const u=URL.createObjectURL(b);
+  const a=document.createElement('a'); a.href=u; a.download=filename; a.click();
+  setTimeout(()=>URL.revokeObjectURL(u),1000);
+}
+
+function showDataMenu() {
+  miniModal({
+    title: '数据管理',
+    showCancel: false,
+    confirm: '关闭',
+    content: `
+      <div style="display:flex;flex-direction:column;gap:10px;margin:8px 0;">
+        <button onclick="closeMini();doExportCSV()" style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;cursor:pointer;font-size:14px;text-align:left;">
+          <span style="font-size:20px;">📥</span>
+          <div><div style="font-weight:600;">导出 Excel</div><div style="font-size:12px;color:#9ca3af;">将客户数据导出为 Excel 文件</div></div>
+        </button>
+        <button onclick="closeMini();doExportJSON()" style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;cursor:pointer;font-size:14px;text-align:left;">
+          <span style="font-size:20px;">💾</span>
+          <div><div style="font-weight:600;">备份数据</div><div style="font-size:12px;color:#9ca3af;">将全部数据（含跟进记录）备份为 JSON</div></div>
+        </button>
+        <button onclick="closeMini();triggerImport()" style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;cursor:pointer;font-size:14px;text-align:left;">
+          <span style="font-size:20px;">📤</span>
+          <div><div style="font-weight:600;">导入数据</div><div style="font-size:12px;color:#9ca3af;">从 JSON 备份文件恢复数据（自动去重）</div></div>
+        </button>
+      </div>
+    `
+  });
+}
+
+function triggerImport() { document.getElementById('file-input').click(); }
+async function handleFileImport(input) {
+  const f=input.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=async e=>{
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.customers||!Array.isArray(data.customers)) throw new Error();
+      const res = await miniModal({ title:'确认导入', content:`发现 ${data.customers.length} 条客户数据。\n已存在的客户（同名+同电话+同单位）将自动更新，不会重复添加。`, confirm:'确认导入' });
+      if (!res.ok) return;
+      let added=0, updated=0, skipped=0;
+      for (const c of data.customers) {
+        // 用姓名+电话+单位组合判断是否已存在
+        const exists = allCustomers.find(x =>
+          x.name === c.name && x.phone === c.phone && x.company === c.company
+        );
+        if (exists) {
+          // 比较时间戳：只有导入版本比云端更新时才覆盖
+          const importTime = c.update_time || c.updateTime || '';
+          const cloudTime = exists.update_time || '';
+          if (importTime > cloudTime) {
+            // 导入版本更新 → 覆盖
+            const updateData = {};
+            if (c.email) updateData.email = c.email;
+            if (c.title) updateData.title = c.title;
+            if (c.research) updateData.research = c.research;
+            if (c.order_no || c.orderNo) updateData.order_no = c.order_no || c.orderNo;
+            if (c.conference) updateData.conference = c.conference;
+            if (c.status) updateData.status = c.status;
+            if (c.type) updateData.type = c.type;
+            if (c.remarks) updateData.remarks = c.remarks;
+            updateData.update_time = now();
+            if (Object.keys(updateData).length > 1) {
+              await sbFetch('/rest/v1/customers?id=eq.' + exists.id, { method: 'PATCH', body: JSON.stringify(updateData) });
+              updated++;
+            } else {
+              skipped++;
+            }
+          } else {
+            // 云端版本更新或相同 → 跳过，保留云端最新数据
+            skipped++;
+          }
+        } else {
+          // 不存在：新增客户
+          const newCustomer = {
+            id: Date.now().toString() + Math.random().toString(36).substr(2,5),
+            user_id: currentUser.id,
+            name: c.name,
+            phone: c.phone,
+            email: c.email,
+            company: c.company,
+            title: c.title,
+            research: c.research,
+            order_no: c.order_no || c.orderNo,
+            conference: c.conference,
+            status: c.status,
+            type: c.type,
+            remarks: c.remarks,
+            create_time: c.create_time || c.createTime || now(),
+            update_time: now()
+          };
+          await sbFetch('/rest/v1/customers', { method: 'POST', body: JSON.stringify(newCustomer) });
+          // 导入跟进记录
+          if (c.followRecords && c.followRecords.length) {
+            for (const fr of c.followRecords) {
+              await sbFetch('/rest/v1/follow_records', { method: 'POST', body: JSON.stringify({
+                id: Date.now().toString() + Math.random().toString(36).substr(2,5),
+                customer_id: newCustomer.id,
+                content: fr.content,
+                date: fr.date
+              }) });
+            }
+          }
+          added++;
+        }
+      }
+      render();
+      toast(`✅ 导入完成：新增 ${added} 条，更新 ${updated} 条，跳过 ${skipped} 条`);
+    } catch(err) { 
+      miniModal({ title:'导入失败', content:'数据格式不正确，请确保是导出的 JSON 格式。', showCancel:false, confirm:'知道了' }); 
+    }
+  };
+  r.readAsText(f,'utf-8');
+  input.value='';
+}
+
+// ═══════════════════════════════════════════════════
+//  复制
+// ═══════════════════════════════════════════════════
+function copyText(text, msg) {
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => toast(msg||'已复制')).catch(() => {
+    const el=document.createElement('textarea'); el.value=text;
+    el.style.cssText='position:fixed;opacity:0;'; document.body.appendChild(el);
+    el.select(); document.execCommand('copy'); document.body.removeChild(el);
+    toast(msg||'已复制');
+  });
+}
+
+// 键盘快捷键
+document.addEventListener('keydown', e => {
+  if (e.key==='Escape') { closeDrawer(); closeFormModal(); closeMini(); }
+  if ((e.metaKey||e.ctrlKey) && e.key==='k') { e.preventDefault(); document.getElementById('search-input').focus(); }
+});
+
+// 启动
+initApp();
+</script>
+</body>
+</html>

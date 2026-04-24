@@ -1427,8 +1427,10 @@
 // 云端缓存（in-memory，每次登录从 Supabase 拉取）
 let cloudCustomers = [];
 
-// 状态迁移映射（旧值 → 新值）
-const STATUS_MIGRATE = { potential:'contacted', submitted:'signed', paid:'completed' };
+// 状态迁移映射（旧值/academic-crm 的 DB 值 → conference-progress 的值）
+// academic-crm DB存: submitted=已投稿, paid=已缴费, finished=已结项
+// conference-progress使用: contacted=已投稿, signed=已缴费, completed=已结项
+const STATUS_MIGRATE = { submitted:'contacted', paid:'signed', finished:'completed' };
 
 // ─── 字段映射：Supabase(snake_case) ↔ 本地(camelCase) ───
 function cloudToLocal(row) {
@@ -1477,7 +1479,28 @@ async function loadCustomers() {
   if (!currentUserId) return [];
   try {
     const rows = await sbFetch('/rest/v1/customers?user_id=eq.' + currentUserId + '&order=update_time.desc');
-    cloudCustomers = (rows || []).map(cloudToLocal);
+    // 自动迁移旧状态值并同步到数据库
+    let migrated = false;
+    for (const row of (rows || [])) {
+      if (STATUS_MIGRATE[row.status]) {
+        const newStatus = STATUS_MIGRATE[row.status];
+        try {
+          await sbFetch('/rest/v1/customers?id=eq.' + row.id, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: newStatus, update_time: custNow() })
+          });
+        } catch(e) {}
+        row.status = newStatus; // 同步本地缓存
+        migrated = true;
+      }
+    }
+    if (migrated) {
+      // 重新查询确保数据一致
+      const fresh = await sbFetch('/rest/v1/customers?user_id=eq.' + currentUserId + '&order=update_time.desc');
+      cloudCustomers = (fresh || []).map(cloudToLocal);
+    } else {
+      cloudCustomers = (rows || []).map(cloudToLocal);
+    }
     return cloudCustomers;
   } catch(e) {
     custToast('加载客户数据失败');
