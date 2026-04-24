@@ -1421,33 +1421,153 @@
 
 <script>
 // ═══════════════════════════════════════════════
-//  客户管理 - 数据层（localStorage）
+//  客户管理 - 数据层（Supabase 云端）
 // ═══════════════════════════════════════════════
-const CUST_KEY = 'ac_customers_v2';
-function custLoad() { try { return JSON.parse(localStorage.getItem(CUST_KEY) || '[]'); } catch { return []; } }
-function custSave(list) { localStorage.setItem(CUST_KEY, JSON.stringify(list)); }
-function custFind(id) { return custLoad().find(c => c.id === id) || null; }
-function custCreate(data) {
-  const list = custLoad();
-  const c = { ...data, id: Date.now().toString(), createTime: custNow(), updateTime: custNow(), followRecords: [] };
-  list.unshift(c); custSave(list); return c;
+
+// 云端缓存（in-memory，每次登录从 Supabase 拉取）
+let cloudCustomers = [];
+
+// 状态迁移映射（旧值 → 新值）
+const STATUS_MIGRATE = { potential:'contacted', submitted:'signed', paid:'completed' };
+
+// ─── 字段映射：Supabase(snake_case) ↔ 本地(camelCase) ───
+function cloudToLocal(row) {
+  if (!row) return null;
+  return {
+    id: String(row.id),
+    name: row.name || '',
+    phone: row.phone || '',
+    email: row.email || '',
+    company: row.company || '',
+    title: row.title || '',
+    research: row.research || '',
+    orderNo: row.order_no || '',
+    conference: row.conference || '',
+    status: STATUS_MIGRATE[row.status] || row.status || 'contacted',
+    type: row.type || 'conference',
+    remarks: row.remarks || '',
+    createTime: row.create_time || '',
+    updateTime: row.update_time || '',
+    followRecords: Array.isArray(row.followRecords) ? row.followRecords : [],
+    _cloudRow: row
+  };
 }
-function custUpdate(id, data) {
-  const list = custLoad(); const i = list.findIndex(c => c.id === id);
-  if (i !== -1) { list[i] = { ...list[i], ...data, updateTime: custNow() }; custSave(list); return list[i]; }
-  return null;
+
+function localToCloud(local) {
+  return {
+    user_id: currentUserId,
+    name: local.name,
+    phone: local.phone,
+    email: local.email || null,
+    company: local.company || null,
+    title: local.title || null,
+    research: local.research || null,
+    order_no: local.orderNo || null,
+    conference: local.conference || null,
+    status: local.status || 'contacted',
+    type: local.type || 'conference',
+    remarks: local.remarks || null,
+    create_time: local.createTime || custNow(),
+    update_time: custNow()
+  };
 }
-function custRemove(id) { custSave(custLoad().filter(c => c.id !== id)); }
-function custAddFollow(id, content) {
-  const c = custFind(id); if (!c) return;
-  if (!c.followRecords) c.followRecords = [];
-  c.followRecords.unshift({ date: custNowFull(), content });
-  custUpdate(id, { followRecords: c.followRecords });
+
+// ─── 云端 CRUD ───
+async function loadCustomers() {
+  if (!currentUserId) return [];
+  try {
+    const rows = await sbFetch('/rest/v1/customers?user_id=eq.' + currentUserId + '&order=update_time.desc');
+    cloudCustomers = (rows || []).map(cloudToLocal);
+    return cloudCustomers;
+  } catch(e) {
+    custToast('加载客户数据失败');
+    return cloudCustomers;
+  }
 }
-function custGenOrderNo(type) {
-  const list = custLoad(); const yr = new Date().getFullYear().toString().slice(-2);
-  const cnt = list.filter(c => c.type === type).length;
-  return type === 'conference' ? `ICDLA${yr}${String(cnt+1).padStart(3,'0')}` : `AISC${yr}${String(cnt+1).padStart(3,'0')}`;
+
+function custLoad() { return cloudCustomers; }
+
+function custFind(id) { return cloudCustomers.find(c => c.id === String(id)) || null; }
+
+async function custCreate(data) {
+  const local = {
+    ...data,
+    id: Date.now().toString(),
+    createTime: custNow(),
+    updateTime: custNow(),
+    followRecords: []
+  };
+  const cloud = localToCloud(local);
+  try {
+    const rows = await sbFetch('/rest/v1/customers', {
+      method: 'POST',
+      body: JSON.stringify(cloud)
+    });
+    // 重新查询获取真实 id
+    const fresh = await sbFetch('/rest/v1/customers?user_id=eq.' + currentUserId + '&order=update_time.desc');
+    cloudCustomers = (fresh || []).map(cloudToLocal);
+    return local;
+  } catch(e) {
+    custToast('保存客户失败');
+    return null;
+  }
+}
+
+async function custUpdate(id, data) {
+  const cloudData = { update_time: custNow() };
+  if (data.name !== undefined) cloudData.name = data.name;
+  if (data.phone !== undefined) cloudData.phone = data.phone;
+  if (data.email !== undefined) cloudData.email = data.email || null;
+  if (data.company !== undefined) cloudData.company = data.company || null;
+  if (data.title !== undefined) cloudData.title = data.title || null;
+  if (data.research !== undefined) cloudData.research = data.research || null;
+  if (data.orderNo !== undefined) cloudData.order_no = data.orderNo || null;
+  if (data.conference !== undefined) cloudData.conference = data.conference || null;
+  if (data.status !== undefined) cloudData.status = data.status;
+  if (data.type !== undefined) cloudData.type = data.type;
+  if (data.remarks !== undefined) cloudData.remarks = data.remarks || null;
+  try {
+    await sbFetch('/rest/v1/customers?id=eq.' + id, { method: 'PATCH', body: JSON.stringify(cloudData) });
+    const i = cloudCustomers.findIndex(c => c.id === String(id));
+    if (i !== -1) cloudCustomers[i] = { ...cloudCustomers[i], ...data, updateTime: custNow() };
+    return cloudCustomers[i] || null;
+  } catch(e) {
+    custToast('更新客户失败');
+    return null;
+  }
+}
+
+async function custRemove(id) {
+  try {
+    // 先删跟进记录
+    await sbFetch('/rest/v1/follow_records?customer_id=eq.' + id, { method: 'DELETE' });
+    await sbFetch('/rest/v1/customers?id=eq.' + id, { method: 'DELETE' });
+    cloudCustomers = cloudCustomers.filter(c => c.id !== String(id));
+  } catch(e) {
+    custToast('删除客户失败');
+  }
+}
+
+async function custAddFollow(id, content) {
+  const rec = { customer_id: id, content, date: custNowFull() };
+  try {
+    await sbFetch('/rest/v1/follow_records', { method: 'POST', body: JSON.stringify(rec) });
+    const c = custFind(id);
+    if (c) {
+      if (!c.followRecords) c.followRecords = [];
+      c.followRecords.unshift({ date: custNowFull(), content });
+      const i = cloudCustomers.findIndex(x => x.id === String(id));
+      if (i !== -1) cloudCustomers[i] = { ...c };
+    }
+  } catch(e) {
+    custToast('添加跟进失败');
+  }
+}
+
+async function custGenOrderNo(type) {
+  const yr = new Date().getFullYear().toString().slice(-2);
+  const prefix = type === 'conference' ? 'ICDLA' : 'AISC';
+  return `${prefix}${yr}${String(cloudCustomers.filter(c => c.type === type).length + 1).padStart(3, '0')}`;
 }
 
 // ═══════════════════════════════════════════════
@@ -1757,8 +1877,8 @@ function renderCustomerDrawer(id) {
   `;
 }
 
-function onCustStatusChange(id, status) {
-  custUpdate(id, { status });
+async function onCustStatusChange(id, status) {
+  await custUpdate(id, { status });
   renderCustomerDrawer(id);
   renderCustomerTable();
   custToast('✅ 状态已更新');
@@ -1767,7 +1887,7 @@ function onCustStatusChange(id, status) {
 async function addCustomerFollow(id) {
   const r = await miniModal({ title:'添加跟进记录', showTA:true, confirm:'添加', content:'' });
   if (!r.ok || !r.val || !r.val.trim()) return;
-  custAddFollow(id, r.val.trim());
+  await custAddFollow(id, r.val.trim());
   renderCustomerDrawer(id);
   renderCustomerTable();
   custToast('✅ 跟进记录已添加');
@@ -1777,7 +1897,7 @@ async function deleteCustomerConfirm(id) {
   const c = custFind(id); if (!c) return;
   const r = await miniModal({ title:'删除客户', content:`确定要删除「${c.name}」吗？此操作不可恢复。`, confirm:'删除', danger:true });
   if (!r.ok) return;
-  custRemove(id);
+  await custRemove(id);
   if (currentCustId===id) closeCustomerDrawer();
   renderCustomerTable();
   custToast('已删除客户');
@@ -1827,7 +1947,7 @@ function openCustomerEditModal(id) {
 function closeCustFormModal() { document.getElementById('cust-form-modal').classList.remove('open'); }
 function closeCustFormOnMask(e) { if (e.target===document.getElementById('cust-form-modal')) closeCustFormModal(); }
 
-function doSaveCustomer() {
+async function doSaveCustomer() {
   const name = document.getElementById('cf-name').value.trim();
   const phone = document.getElementById('cf-phone').value.trim();
   const email = document.getElementById('cf-email').value.trim();
@@ -1848,13 +1968,13 @@ function doSaveCustomer() {
   };
 
   if (custG.editingId) {
-    custUpdate(custG.editingId, data);
+    await custUpdate(custG.editingId, data);
     custToast('✅ 修改成功');
     if (currentCustId===custG.editingId) renderCustomerDrawer(custG.editingId);
   } else {
     data.type = (custG.type === 'all' || !custG.type) ? 'conference' : custG.type;
-    data.orderNo = data.orderNo || custGenOrderNo(data.type);
-    custCreate(data);
+    data.orderNo = data.orderNo || (await custGenOrderNo(data.type));
+    await custCreate(data);
     custToast('✅ 添加成功');
   }
   closeCustFormModal();
@@ -1955,18 +2075,18 @@ function doExportConferenceJSON() {
 function dl(data, fn, type) { const b=new Blob([data],{type}); const u=URL.createObjectURL(b); const a=document.createElement('a'); a.href=u; a.download=fn; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(u); }
 
 function triggerImport() { document.getElementById('file-input').click(); }
-function handleFileImport(input) {
+async function handleFileImport(input) {
   const f = input.files[0]; if (!f) return;
+  custToast('正在导入…');
   const reader = new FileReader();
-  reader.onload = e => {
+  reader.onload = async e => {
     try {
       const text = e.target.result;
       let list = [];
       if (f.name.endsWith('.csv')) {
-        // CSV 导入：解析 TSV 格式的 CSV
+        // CSV 导入：解析制表符分隔的 CSV
         const lines = text.split('\n').filter(l => l.trim());
         if (lines.length < 2) throw new Error('CSV 文件内容为空');
-        // 跳过表头，解析数据行
         for (let i = 1; i < lines.length; i++) {
           const cols = lines[i].split('\t');
           if (cols.length >= 2) {
@@ -1978,7 +2098,7 @@ function handleFileImport(input) {
               title: cols[7] || '',
               research: cols[8] || '',
               conference: cols[9] || '',
-              status: cols[10] || 'potential',
+              status: cols[10] || 'contacted',
               type: cols[1] === '会议客户' ? 'conference' : 'journal',
               orderNo: cols[2] || '',
               followRecords: [],
@@ -1995,14 +2115,12 @@ function handleFileImport(input) {
         if (Array.isArray(data)) {
           rawList = data;
         } else if (data.customers && Array.isArray(data.customers)) {
-          rawList = data.customers;  // 兼容旧页面导出的包装格式
+          rawList = data.customers;
         } else {
           throw new Error('JSON 格式不正确');
         }
-        // 字段名兼容转换（下划线 → 驼峰，状态值转换）
         const statusMap = { submitted: 'contacted', paid: 'signed' };
         list = rawList.map(c => ({
-          id: c.id || c.id,
           name: c.name || '',
           phone: c.phone || '',
           email: c.email || '',
@@ -2011,16 +2129,19 @@ function handleFileImport(input) {
           research: c.research || '',
           orderNo: c.order_no || c.orderNo || '',
           conference: c.conference || '',
-          status: statusMap[c.status] || c.status || 'potential',
+          status: statusMap[c.status] || c.status || 'contacted',
           type: c.type || 'conference',
           remarks: c.remarks || '',
           createTime: c.create_time || c.createTime || new Date().toISOString(),
           updateTime: c.update_time || c.updateTime || new Date().toISOString(),
-          // followRecords 如果是数组则保留，否则设为空数组
           followRecords: Array.isArray(c.followRecords) ? c.followRecords : []
         }));
       }
-      custSave(list);
+      // 逐条写入 Supabase
+      for (const item of list) {
+        await custCreate(item);
+      }
+      await loadCustomers();
       renderCustomerTable();
       custToast(`✅ 成功导入 ${list.length} 条客户数据`);
     } catch(err) { custToast('导入失败：' + err.message); }
@@ -2126,11 +2247,8 @@ function updateConfPageTitle() {
 // 页面初始化：默认显示客户管理
 document.addEventListener('DOMContentLoaded', () => {
   switchMainModule('customer');
-  renderCustomerTable();
-  // 如果已登录，恢复会议数据
-  if (confCurrentUserId && typeof loadConferences === 'function') {
-    loadConferences();
-  }
+  // 未登录时不渲染（显示登录页），等 session restore 后再渲染
+  // renderCustomerTable() 在 login/initApp/loadCustomers 后调用
 });
 
 // ═══════════════════════════════════════════════
@@ -2277,6 +2395,7 @@ function toggleDataManager() {
 }
 function doLogout() {
   clearSession();
+  cloudCustomers = [];
   conferences = [];
   document.getElementById('app').classList.remove('active');
   document.getElementById('authPage').style.display = 'flex';
@@ -2285,13 +2404,17 @@ function doLogout() {
 // ═══════════════════════════════════════════════
 //  初始化
 // ═══════════════════════════════════════════════
-function initApp(email) {
+async function initApp(email) {
   document.getElementById('authPage').style.display = 'none';
   document.getElementById('app').classList.add('active');
   // 更新侧边栏用户信息
   const shortEmail = email.length > 12 ? email.substring(0, 12) + '...' : email;
   document.getElementById('sidebarEmail').textContent = shortEmail;
   document.getElementById('sidebarAvatar').textContent = email[0].toUpperCase();
+  // 加载云端客户数据
+  await loadCustomers();
+  renderCustomerTable();
+  // 加载会议数据
   loadConferences();
 }
 document.getElementById('authPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
@@ -2299,7 +2422,13 @@ document.getElementById('authPass').addEventListener('keydown', e => { if (e.key
 // 页面加载时尝试恢复上次 session
 (async () => {
   const ok = await restoreSession();
-  if (ok) initApp(currentEmail);
+  if (ok) {
+    await initApp(currentEmail);
+  } else {
+    // 未登录：显示登录页
+    switchMainModule('customer');
+    document.getElementById('authPage').style.display = 'flex';
+  }
 })();
 
 // ═══════════════════════════════════════════════
