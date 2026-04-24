@@ -499,8 +499,8 @@
     /* ══════════════════════════════════
        移动端完整适配（≤ 768px）
     ══════════════════════════════════ */
-    /* 桌面端隐藏移动端专属元素 */
-    .mobile-search-row, .mobile-header, .mobile-tabbar, .mobile-sidebar-drawer, .mobile-drawer-mask { display: none !important; }
+    /* 桌面端隐藏移动端专属元素（不用 !important，让媒体查询可覆盖） */
+    .mobile-search-row, .mobile-header, .mobile-tabbar, .mobile-sidebar-drawer, .mobile-drawer-mask { display: none; }
     /* 移动顶部 header */
     .mobile-header {
       display: none;
