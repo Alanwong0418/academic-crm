@@ -2299,6 +2299,8 @@ function setActiveTab(tabId) {
 }
 
 function updateConfPageTitle() {
+  const confVisible = document.getElementById('confContent')?.style.display !== 'none';
+  if (!confVisible) return;
   const total = typeof conferences !== 'undefined' ? conferences.length : 0;
   document.getElementById('pageTitle').textContent = '会议进度管理';
   document.getElementById('pageBadge').textContent = `${total} 个会议`;
@@ -2854,7 +2856,11 @@ function renderAll() {
   const total = allConferences.length;
   const shown = filtered.length;
   document.getElementById('confCount').textContent = shown;
-  document.getElementById('pageBadge').textContent = (searchTerm || statusFilter !== 'all') ? `${shown}/${total} 个会议` : `${shown} 个会议`;
+  // 只在会议模块可见时更新 pageBadge，避免覆盖客户管理的计数
+  const confVisible = document.getElementById('confContent')?.style.display !== 'none';
+  if (confVisible) {
+    document.getElementById('pageBadge').textContent = (searchTerm || statusFilter !== 'all') ? `${shown}/${total} 个会议` : `${shown} 个会议`;
+  }
   if (currentView === 'card') renderCards();
   else renderTimeline();
 }
