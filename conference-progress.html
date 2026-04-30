@@ -405,10 +405,19 @@
     .no-follow { text-align:center; padding:24px 0; color:var(--text-muted); font-size:13px; }
     /* 状态选择器 */
     .status-select { padding:4px 28px 4px 10px; border-radius:20px; font-size:12px; font-weight:500; border:1.5px solid; cursor:pointer; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 8px center; }
-    .status-select.potential { background-color:#fef9c3; color:#854d0e; border-color:#fde047; }
-    .status-select.contacted { background-color:#dbeafe; color:#1d4ed8; border-color:#93c5fd; }
-    .status-select.signed { background-color:#dcfce7; color:#15803d; border-color:#86efac; }
-    .status-select.completed { background-color:#f3e8ff; color:#7e22ce; border-color:#d8b4fe; }
+    .status-select.potential       { background-color:#fef9c3; color:#854d0e;  border-color:#fde047; }
+    .status-select.pre_review      { background-color:#dbeafe; color:#1d4ed8;  border-color:#93c5fd; }
+    .status-select.pre_revise      { background-color:#bfdbfe; color:#1e40af;  border-color:#60a5fa; }
+    .status-select.ext_review      { background-color:#e0f2fe; color:#0369a1;  border-color:#7dd3fc; }
+    .status-select.ext_revise      { background-color:#bae6fd; color:#075985;  border-color:#38bdf8; }
+    .status-select.re_review       { background-color:#ede9fe; color:#5b21b6;  border-color:#c4b5fd; }
+    .status-select.re_revise       { background-color:#ddd6fe; color:#4c1d95;  border-color:#a78bfa; }
+    .status-select.pending_recommend,.status-select.pending_accept,.status-select.pending_publish,.status-select.pending_index
+                                   { background-color:#fef3c7; color:#92400e;  border-color:#fcd34d; }
+    .status-select.pending_pay     { background-color:#ffedd5; color:#9a3412;  border-color:#fdba74; }
+    .status-select.paid            { background-color:#dcfce7; color:#15803d;  border-color:#86efac; }
+    .status-select.attended        { background-color:#bbf7d0; color:#166534;  border-color:#4ade80; }
+    .status-select.completed       { background-color:#f3e8ff; color:#7e22ce;  border-color:#d8b4fe; }
     /* 弹窗 */
     .modal-mask { position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:700; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity .2s; }
     .modal-mask.open { opacity:1; pointer-events:auto; }
@@ -480,8 +489,21 @@
     .badge { display:inline-flex; align-items:center; gap:5px; padding:2px 9px; border-radius:20px; font-size:12px; font-weight:600; white-space:nowrap; }
     .badge-potential { background:#fef9c3; color:#854d0e; }
     .badge-submitted { background:#dbeafe; color:#1d4ed8; }
-    .badge-paid { background:#dcfce7; color:#15803d; }
-    .badge-closed { background:#f3e8ff; color:#7e22ce; }
+    /* 审稿类：蓝色系 */
+    .badge-pre-review  { background:#dbeafe; color:#1d4ed8; }
+    .badge-pre-revise  { background:#bfdbfe; color:#1e40af; }
+    .badge-ext-review  { background:#e0f2fe; color:#0369a1; }
+    .badge-ext-revise  { background:#bae6fd; color:#075985; }
+    .badge-re-review   { background:#ede9fe; color:#5b21b6; }
+    .badge-re-revise   { background:#ddd6fe; color:#4c1d95; }
+    /* 等待类：橙色系 */
+    .badge-pending     { background:#fef3c7; color:#92400e; }
+    .badge-pending-pay { background:#ffedd5; color:#9a3412; }
+    /* 缴费/参会：绿色系 */
+    .badge-paid     { background:#dcfce7; color:#15803d; }
+    .badge-attended { background:#bbf7d0; color:#166534; }
+    /* 结项：紫色 */
+    .badge-closed   { background:#f3e8ff; color:#7e22ce; }
     /* Toast */
     .cust-toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(10px); background:#1e293b; color:#fff; padding:10px 20px; border-radius:8px; font-size:13.5px; z-index:9999; pointer-events:none; opacity:0; transition:all .25s; white-space:nowrap; box-shadow:0 4px 16px rgba(0,0,0,.2); }
     .cust-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
@@ -884,14 +906,21 @@
             <div class="stat-label">期刊客户</div>
           </div>
         </div>
-        <div class="stat-card" id="cust-stat-submitted" onclick="setCustomerStatusFilter('contacted')">
+        <div class="stat-card" id="cust-stat-submitted" onclick="setCustomerStatusFilter('pre_review')">
           <div class="stat-icon teal">📝</div>
           <div>
             <div class="stat-num" id="cust-contacted">0</div>
-            <div class="stat-label">已投稿</div>
+            <div class="stat-label">审稿中</div>
           </div>
         </div>
-        <div class="stat-card" id="cust-stat-paid" onclick="setCustomerStatusFilter('signed')">
+        <div class="stat-card" id="cust-stat-pending-pay" onclick="setCustomerStatusFilter('pending_pay')">
+          <div class="stat-icon orange">⏳</div>
+          <div>
+            <div class="stat-num" id="cust-pending-pay">0</div>
+            <div class="stat-label">待缴费</div>
+          </div>
+        </div>
+        <div class="stat-card" id="cust-stat-paid" onclick="setCustomerStatusFilter('paid')">
           <div class="stat-icon green">💰</div>
           <div>
             <div class="stat-num" id="cust-signed">0</div>
@@ -1052,8 +1081,19 @@
         <div class="form-group">
           <label class="form-label">客户状态</label>
           <select class="form-select" id="cf-status">
-            <option value="contacted">已投稿</option>
-            <option value="signed">已缴费</option>
+            <option value="pre_review">预审中</option>
+            <option value="pre_revise">预审返修</option>
+            <option value="ext_review">外审中</option>
+            <option value="ext_revise">外审返修</option>
+            <option value="re_review">复审中</option>
+            <option value="re_revise">复审返修</option>
+            <option value="pending_recommend">待推荐</option>
+            <option value="pending_accept">待录用</option>
+            <option value="pending_pay">待缴费</option>
+            <option value="paid">已缴费</option>
+            <option value="attended">已参会</option>
+            <option value="pending_publish">待见刊</option>
+            <option value="pending_index">待检索</option>
             <option value="completed">已结项</option>
           </select>
         </div>
@@ -1422,9 +1462,8 @@
 let cloudCustomers = [];
 
 // 状态迁移映射（旧值/academic-crm 的 DB 值 → conference-progress 的值）
-// academic-crm DB存: submitted=已投稿, paid=已缴费, finished=已结项
-// conference-progress使用: contacted=已投稿, signed=已缴费, completed=已结项
-const STATUS_MIGRATE = { submitted:'contacted', paid:'signed', finished:'completed' };
+// academic-crm DB存: submitted=已投稿→pre_review, paid=已缴费→paid, finished=已结项→completed
+const STATUS_MIGRATE = { submitted:'pre_review', paid:'paid', finished:'completed', contacted:'pre_review', signed:'paid' };
 
 // ─── 字段映射：Supabase(snake_case) ↔ 本地(camelCase) ───
 function cloudToLocal(row) {
@@ -1637,9 +1676,34 @@ function copyText(text, msg) {
   navigator.clipboard.writeText(text).then(() => custToast(msg || '已复制')).catch(() => custToast('复制失败'));
 }
 
-const CUST_STATUS = { contacted:'已投稿', signed:'已缴费', completed:'已结项' };
-const CUST_BADGE_CLASS = { contacted:'badge-submitted', signed:'badge-paid', completed:'badge-closed' };
-const CUST_STATUS_SEL_CLASS = { contacted:'contacted', signed:'signed', completed:'completed' };
+const CUST_STATUS = {
+  pre_review:     '预审中',
+  pre_revise:     '预审返修',
+  ext_review:     '外审中',
+  ext_revise:     '外审返修',
+  re_review:      '复审中',
+  re_revise:      '复审返修',
+  pending_recommend: '待推荐',
+  pending_accept: '待录用',
+  pending_pay:    '待缴费',
+  paid:           '已缴费',
+  attended:       '已参会',
+  pending_publish:'待见刊',
+  pending_index:  '待检索',
+  completed:      '已结项'
+};
+const CUST_BADGE_CLASS = {
+  pre_review:'badge-pre-review', pre_revise:'badge-pre-revise',
+  ext_review:'badge-ext-review', ext_revise:'badge-ext-revise',
+  re_review:'badge-re-review',   re_revise:'badge-re-revise',
+  pending_recommend:'badge-pending', pending_accept:'badge-pending',
+  pending_pay:'badge-pending-pay', paid:'badge-paid',
+  attended:'badge-attended', pending_publish:'badge-pending',
+  pending_index:'badge-pending', completed:'badge-closed'
+};
+const CUST_STATUS_SEL_CLASS = Object.fromEntries(Object.keys(CUST_STATUS).map(k=>[k,k]));
+// 旧状态值兼容迁移
+const STATUS_LEGACY = { contacted:'pre_review', signed:'paid' };
 
 // ═══════════════════════════════════════════════
 //  全局状态
@@ -1729,26 +1793,30 @@ function renderCustomerTable() {
   const sortVal = document.getElementById('sort-select')?.value || 'updateTime_desc';
   if (sortVal==='name_asc') data.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
   else if (sortVal==='createTime_desc') data.sort((a,b)=>(b.createTime||'').localeCompare(a.createTime||''));
-  else if (sortVal==='signed_first') data.sort((a,b)=>(a.status==='signed'?-1:b.status==='signed'?1:0));
+  else if (sortVal==='signed_first') data.sort((a,b)=>(a.status==='paid'?-1:b.status==='paid'?1:0));
   else data.sort((a,b)=>(b.updateTime||'').localeCompare(a.updateTime||''));
 
   // 统计
   document.getElementById('cust-total').textContent = all.length;
   document.getElementById('cust-conf-type').textContent = confCnt;
   document.getElementById('cust-jour-type').textContent = jourCnt;
-  document.getElementById('cust-contacted').textContent = all.filter(c=>c.status==='contacted').length;
-  document.getElementById('cust-signed').textContent = all.filter(c=>c.status==='signed').length;
+  // 审稿中 = 预审中/预审返修/外审中/外审返修/复审中/复审返修
+  const reviewStatuses = ['pre_review','pre_revise','ext_review','ext_revise','re_review','re_revise'];
+  document.getElementById('cust-contacted').textContent = all.filter(c=>reviewStatuses.includes(c.status)).length;
+  document.getElementById('cust-pending-pay').textContent = all.filter(c=>c.status==='pending_pay').length;
+  document.getElementById('cust-signed').textContent = all.filter(c=>c.status==='paid').length;
   document.getElementById('cust-completed').textContent = all.filter(c=>c.status==='completed').length;
 
   // 统计卡片激活
-  ['cust-stat-all','cust-stat-conf-type','cust-stat-jour-type','cust-stat-submitted','cust-stat-paid','cust-stat-closed'].forEach(id=>{
+  ['cust-stat-all','cust-stat-conf-type','cust-stat-jour-type','cust-stat-submitted','cust-stat-pending-pay','cust-stat-paid','cust-stat-closed'].forEach(id=>{
     document.getElementById(id)?.classList.remove('active');
   });
   if (custG.status==='all' && custG.type==='all') document.getElementById('cust-stat-all')?.classList.add('active');
   else if (custG.type==='conference') document.getElementById('cust-stat-conf-type')?.classList.add('active');
   else if (custG.type==='journal') document.getElementById('cust-stat-jour-type')?.classList.add('active');
-  else if (custG.status==='contacted') document.getElementById('cust-stat-submitted')?.classList.add('active');
-  else if (custG.status==='signed') document.getElementById('cust-stat-paid')?.classList.add('active');
+  else if (reviewStatuses.includes(custG.status)) document.getElementById('cust-stat-submitted')?.classList.add('active');
+  else if (custG.status==='pending_pay') document.getElementById('cust-stat-pending-pay')?.classList.add('active');
+  else if (custG.status==='paid') document.getElementById('cust-stat-paid')?.classList.add('active');
   else if (custG.status==='completed') document.getElementById('cust-stat-closed')?.classList.add('active');
 
   // 分页
@@ -1914,9 +1982,7 @@ function renderCustomerDrawer(id) {
         <div class="hero-name">${custEsc(c.name)}</div>
         <div class="hero-meta">
           <select class="status-select ${CUST_STATUS_SEL_CLASS[c.status]||''}" onchange="onCustStatusChange('${custEsc(c.id)}',this.value)">
-            <option value="contacted" ${c.status==='contacted'?'selected':''}>已投稿</option>
-            <option value="signed" ${c.status==='signed'?'selected':''}>已缴费</option>
-            <option value="completed" ${c.status==='completed'?'selected':''}>已结项</option>
+            ${Object.entries(CUST_STATUS).map(([v,l])=>`<option value="${v}" ${c.status===v?'selected':''}>${l}</option>`).join('')}
           </select>
           ${c.createTime ? `<span style="font-size:12px;color:var(--text-muted);">创建于 ${c.createTime}</span>` : ''}
         </div>
@@ -2056,7 +2122,7 @@ function doExportCustomerCSV() {
   const list = custLoad();
   if (!list.length) { custToast('暂无客户数据可导出'); return; }
   const escapeCSV = v => { const x=String(v||''); return x.includes(',')||x.includes('"')||x.includes('\n')?'"'+x.replace(/"/g,'""')+'"':x; };
-  const ST = { contacted:'已投稿', signed:'已缴费', completed:'已结项' };
+  const ST = CUST_STATUS;
   const TY = { conference:'会议客户', journal:'期刊客户' };
   let s = ['序号','类型','订单号','姓名','电话','邮箱','工作单位','职称','研究方向','关联会议/期刊','状态','跟进记录数','创建时间','更新时间','备注'].map(escapeCSV).join(',')+'\n';
   list.forEach((c,i) => {
