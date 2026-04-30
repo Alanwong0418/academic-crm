@@ -1528,8 +1528,12 @@ function custLoad() { return cloudCustomers; }
 
 function custFind(id) { return cloudCustomers.find(c => c.id === String(id)) || null; }
 
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
 async function custCreate(data) {
-  const localId = Date.now().toString();
+  const localId = genId();
   const local = {
     ...data,
     id: localId,
@@ -1538,23 +1542,29 @@ async function custCreate(data) {
     followRecords: data.followRecords || []
   };
   const cloud = localToCloud(local);
-  // 不含 followRecords，避免 JSON 列报错
+  // 带上 id，不含 followRecords
   const { followRecords: _fr, ...cloudNoFr } = cloud;
+  cloudNoFr.id = localId; // 确保主键写入
   try {
-    await sbFetch('/rest/v1/customers', { method: 'POST', body: JSON.stringify(cloudNoFr) });
-    // 写入跟进记录（用 localId 作为关联，假设 Supabase 也是数字 ID 可匹配）
+    await sbFetch('/rest/v1/customers', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=minimal' },
+      body: JSON.stringify(cloudNoFr)
+    });
+    // 写入跟进记录
     if (local.followRecords.length > 0) {
       for (const rec of local.followRecords) {
         await sbFetch('/rest/v1/follow_records', {
           method: 'POST',
-          body: JSON.stringify({ customer_id: localId, content: rec.content, date: rec.date || '' })
+          headers: { 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ id: genId(), customer_id: localId, content: rec.content, date: rec.date || '' })
         }).catch(() => {});
       }
     }
     await loadCustomers();
     return local;
   } catch(e) {
-    custToast('保存客户失败');
+    custToast('保存客户失败：' + (e.message || '未知错误'));
     return null;
   }
 }
@@ -1595,7 +1605,7 @@ async function custRemove(id) {
 }
 
 async function custAddFollow(id, content) {
-  const rec = { customer_id: id, content, date: custNowFull() };
+  const rec = { id: genId(), customer_id: id, content, date: custNowFull() };
   try {
     await sbFetch('/rest/v1/follow_records', { method: 'POST', body: JSON.stringify(rec) });
     const c = custFind(id);
@@ -2020,8 +2030,8 @@ async function doSaveCustomer() {
   } else {
     data.type = (custG.type === 'all' || !custG.type) ? 'conference' : custG.type;
     data.orderNo = data.orderNo || (await custGenOrderNo(data.type));
-    await custCreate(data);
-    custToast('✅ 添加成功');
+    const result = await custCreate(data);
+    if (result) custToast('✅ 添加成功');
   }
   closeCustFormModal();
   renderCustomerTable();
