@@ -629,6 +629,9 @@
       }
       .table-wrap td.td-actions { justify-content: flex-end; margin-top: 4px; }
       .table-wrap td.td-actions::before { display: none; }
+      /* 强制「跟进」列横排，防止数字和"条"分开竖排 */
+      .table-wrap td[data-label="跟进"] { flex-direction: row !important; align-items: center !important; white-space: nowrap; }
+      .table-wrap td[data-label="跟进"] span { white-space: nowrap; }
 
       /* 详情弹窗全屏 */
       .overlay { align-items: flex-end !important; }
@@ -1861,7 +1864,7 @@ function renderCustomerTable() {
         </td>
         <td data-label="关联会议">${custEsc(c.conference) || '<span style="color:#d1d5db;">—</span>'}</td>
         <td data-label="状态"><span class="badge ${CUST_BADGE_CLASS[c.status]||''}">${CUST_STATUS[c.status]||c.status}</span></td>
-        <td data-label="跟进"><span style="color:${(c.followRecords||[]).length>0?'var(--brand)':'var(--text-muted)'};">${(c.followRecords||[]).length} 条</span></td>
+        <td data-label="跟进"><span style="color:${(c.followRecords||[]).length>0?'var(--brand)':'var(--text-muted)';white-space:nowrap;">${(c.followRecords||[]).length} 条</span></td>
         <td data-label="更新时间" style="color:var(--text-muted);white-space:nowrap;">${c.updateTime||''}</td>
         <td class="td-actions">
           <div class="td-actions">
