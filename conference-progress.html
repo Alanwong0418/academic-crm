@@ -2246,6 +2246,10 @@ function switchMainModule(module) {
     addCustBtn.style.display = 'inline-flex';
     addConfBtn.style.display = 'none';
     document.getElementById('sort-select').style.display = 'inline-block';
+    // 还原客户管理标题和计数
+    const titleMap2 = { all:'全部客户', conference:'会议客户', journal:'期刊客户' };
+    document.getElementById('pageTitle').textContent = titleMap2[custG && custG.type] || '全部客户';
+    document.getElementById('pageBadge').textContent = `${cloudCustomers ? cloudCustomers.length : 0} 位客户`;
   }
 
   // 移动端搜索行同步
