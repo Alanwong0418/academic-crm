@@ -912,7 +912,7 @@
             <div class="stat-label">期刊客户</div>
           </div>
         </div>
-        <div class="stat-card" id="cust-stat-submitted" onclick="setCustomerStatusFilter('pre_review')">
+        <div class="stat-card" id="cust-stat-submitted" onclick="setCustomerStatusFilter('__reviewing__')">
           <div class="stat-icon teal">📝</div>
           <div>
             <div class="stat-num" id="cust-contacted">0</div>
@@ -1786,8 +1786,10 @@ function renderCustomerTable() {
   document.getElementById('pageTitle').textContent = titleMap[custG.type] || '全部客户';
 
   // 过滤
+  const reviewStatuses = ['pre_review','pre_revise','ext_review','ext_revise','re_review','re_revise'];
   let data = custG.type === 'all' ? all : all.filter(c=>c.type===custG.type);
-  if (custG.status !== 'all') data = data.filter(c=>c.status===custG.status);
+  if (custG.status === '__reviewing__') data = data.filter(c=>reviewStatuses.includes(c.status));
+  else if (custG.status !== 'all') data = data.filter(c=>c.status===custG.status);
   if (custG.kw) {
     const kw = custG.kw.toLowerCase();
     data = data.filter(c=>
