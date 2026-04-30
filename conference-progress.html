@@ -412,6 +412,7 @@
     .status-select.ext_revise      { background-color:#bae6fd; color:#075985;  border-color:#38bdf8; }
     .status-select.re_review       { background-color:#ede9fe; color:#5b21b6;  border-color:#c4b5fd; }
     .status-select.re_revise       { background-color:#ddd6fe; color:#4c1d95;  border-color:#a78bfa; }
+    .status-select.rejected        { background-color:#fee2e2; color:#b91c1c;  border-color:#fca5a5; }
     .status-select.pending_recommend,.status-select.pending_accept,.status-select.pending_publish,.status-select.pending_index
                                    { background-color:#fef3c7; color:#92400e;  border-color:#fcd34d; }
     .status-select.pending_pay     { background-color:#ffedd5; color:#9a3412;  border-color:#fdba74; }
@@ -496,6 +497,8 @@
     .badge-ext-revise  { background:#bae6fd; color:#075985; }
     .badge-re-review   { background:#ede9fe; color:#5b21b6; }
     .badge-re-revise   { background:#ddd6fe; color:#4c1d95; }
+    /* 拒稿：红色 */
+    .badge-rejected    { background:#fee2e2; color:#b91c1c; }
     /* 等待类：橙色系 */
     .badge-pending     { background:#fef3c7; color:#92400e; }
     .badge-pending-pay { background:#ffedd5; color:#9a3412; }
@@ -1087,6 +1090,7 @@
             <option value="ext_revise">外审返修</option>
             <option value="re_review">复审中</option>
             <option value="re_revise">复审返修</option>
+            <option value="rejected">已拒稿</option>
             <option value="pending_recommend">待推荐</option>
             <option value="pending_accept">待录用</option>
             <option value="pending_pay">待缴费</option>
@@ -1683,6 +1687,7 @@ const CUST_STATUS = {
   ext_revise:     '外审返修',
   re_review:      '复审中',
   re_revise:      '复审返修',
+  rejected:       '已拒稿',
   pending_recommend: '待推荐',
   pending_accept: '待录用',
   pending_pay:    '待缴费',
@@ -1696,6 +1701,7 @@ const CUST_BADGE_CLASS = {
   pre_review:'badge-pre-review', pre_revise:'badge-pre-revise',
   ext_review:'badge-ext-review', ext_revise:'badge-ext-revise',
   re_review:'badge-re-review',   re_revise:'badge-re-revise',
+  rejected:'badge-rejected',
   pending_recommend:'badge-pending', pending_accept:'badge-pending',
   pending_pay:'badge-pending-pay', paid:'badge-paid',
   attended:'badge-attended', pending_publish:'badge-pending',
