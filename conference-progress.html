@@ -1812,7 +1812,6 @@ function renderCustomerTable() {
   document.getElementById('cust-conf-type').textContent = confCnt;
   document.getElementById('cust-jour-type').textContent = jourCnt;
   // 审稿中 = 预审中/预审返修/外审中/外审返修/复审中/复审返修
-  const reviewStatuses = ['pre_review','pre_revise','ext_review','ext_revise','re_review','re_revise'];
   document.getElementById('cust-contacted').textContent = all.filter(c=>reviewStatuses.includes(c.status)).length;
   document.getElementById('cust-pending-pay').textContent = all.filter(c=>c.status==='pending_pay').length;
   document.getElementById('cust-signed').textContent = all.filter(c=>c.status==='paid').length;
