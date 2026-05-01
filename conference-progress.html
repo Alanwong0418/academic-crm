@@ -627,8 +627,9 @@
         font-size: 11px; font-weight: 600; color: var(--text-muted);
         padding-top: 1px;
       }
-      .table-wrap td.td-actions { justify-content: flex-end; margin-top: 4px; }
+      .table-wrap td.td-actions { justify-content: flex-end; margin-top: 4px; flex-direction: row !important; flex-wrap: nowrap; }
       .table-wrap td.td-actions::before { display: none; }
+      .table-wrap td.td-actions .td-actions { flex-direction: row !important; flex-wrap: nowrap; }
       /* 强制「跟进」列横排，防止数字和"条"分开竖排 */
       .table-wrap td[data-label="跟进"] { flex-direction: row !important; align-items: center !important; white-space: nowrap; }
       .table-wrap td[data-label="跟进"] span { white-space: nowrap; }
