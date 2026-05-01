@@ -462,17 +462,18 @@
     .page-btn.active { background:var(--brand); color:#fff; border-color:var(--brand); }
     .page-btn:disabled { opacity:.4; cursor:not-allowed; }
     /* 表格 */
-    .table-wrap { background:#fff; border-radius:10px; box-shadow:var(--shadow); overflow:visible; overflow-x:auto; margin-top:16px; }
-    .table-wrap table { width:max-content; border-collapse:collapse; table-layout:auto; }
-    .table-wrap th { background:#f8fafc; padding:12px 16px; text-align:left; font-size:12px; font-weight:600; color:var(--text-muted); border-bottom:1px solid var(--border); white-space:nowrap; }
-    .table-wrap td { padding:12px 16px; border-bottom:1px solid var(--border); font-size:13.5px; vertical-align:middle; }
+    .table-wrap { background:#fff; border-radius:10px; box-shadow:var(--shadow); overflow:hidden; margin-top:16px; }
+    .table-wrap table { width:100%; border-collapse:collapse; table-layout:fixed; }
+    .table-wrap th { background:#f8fafc; padding:10px 12px; text-align:left; font-size:12px; font-weight:600; color:var(--text-muted); border-bottom:1px solid var(--border); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .table-wrap td { padding:10px 12px; border-bottom:1px solid var(--border); font-size:13px; vertical-align:middle; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .table-wrap tbody tr { transition:background .1s; cursor:pointer; }
     .table-wrap tbody tr:hover { background:#f8fafc; }
     .td-name { font-weight:600; color:var(--text-primary); }
     .td-sub { font-size:12px; color:var(--text-muted); margin-top:2px; }
     .td-phone { color:var(--brand); cursor:pointer; }
     .td-phone:hover { text-decoration:underline; }
-    .td-actions { display:flex; gap:6px; align-items:center; }
+    .td-actions { display:flex; gap:6px; flex-shrink:0; }
+    .td-actions .btn { padding:5px 10px; font-size:12px; }
     .empty { text-align:center; padding:60px 20px; color:var(--text-muted); }
     .empty-icon { font-size:48px; margin-bottom:12px; }
     .empty-text { font-size:16px; font-weight:600; margin-bottom:6px; color:var(--text-secondary); }
@@ -610,43 +611,28 @@
       .table-wrap thead { display: none; }
       .table-wrap tbody { display: flex; flex-direction: column; gap: 10px; padding: 10px; background: var(--bg); }
       .table-wrap tbody tr {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px 12px;
+        display: flex; flex-direction: column; gap: 6px;
         background: #fff; border-radius: 10px; padding: 14px;
         box-shadow: var(--shadow); border: 1px solid var(--border);
         cursor: pointer; transition: box-shadow .15s;
       }
       .table-wrap tbody tr:hover { box-shadow: var(--shadow-md); }
       .table-wrap td {
-        display: flex; flex-direction: column; gap: 2px;
+        display: flex; align-items: flex-start; gap: 8px;
         padding: 0; border: none; font-size: 13px;
       }
       /* 给每列加数据标签 */
       .table-wrap td[data-label]::before {
         content: attr(data-label);
-        font-size: 10px; font-weight: 600; color: var(--text-muted);
-        text-transform: uppercase; letter-spacing: 0.3px;
-        margin-bottom: 2px;
+        flex-shrink: 0; width: 56px;
+        font-size: 11px; font-weight: 600; color: var(--text-muted);
+        padding-top: 1px;
       }
-      /* 客户列：跨两列显示在最上方 */
-      .table-wrap td[data-label="客户"] {
-        grid-column: 1 / -1;
-        flex-direction: row; align-items: center; gap: 10px;
-      }
-      .table-wrap td[data-label="客户"]::before { display: none; }
-      .table-wrap td[data-label="客户"] .td-name { font-size: 15px; font-weight: 700; }
-      .table-wrap td[data-label="客户"] .td-sub { font-size: 12px; color: var(--text-muted); margin-top: 0; }
-      /* 操作列：跨两列显示在最下方 */
-      .table-wrap td.td-actions {
-        grid-column: 1 / -1;
-        display: flex !important; flex-direction: row !important;
-        flex-wrap: nowrap !important; align-items: center;
-        justify-content: flex-end; gap: 8px;
-        padding-top: 6px; margin-top: 2px;
-        border-top: 1px solid var(--border);
-      }
+      .table-wrap td.td-actions { justify-content: flex-end; margin-top: 4px; }
       .table-wrap td.td-actions::before { display: none; }
+      /* 强制「跟进」列横排，防止数字和"条"分开竖排 */
+      .table-wrap td[data-label="跟进"] { flex-direction: row !important; align-items: center !important; white-space: nowrap; }
+      .table-wrap td[data-label="跟进"] span { white-space: nowrap; }
 
       /* 详情弹窗全屏 */
       .overlay { align-items: flex-end !important; }
@@ -964,10 +950,10 @@
             <tr>
               <th style="width:100px;">客户</th>
               <th style="width:120px;">联系方式</th>
-              <th>单位 / 职称</th>
-              <th>关联会议</th>
+              <th style="min-width:150px;">单位 / 职称</th>
+              <th style="min-width:160px;">关联会议</th>
               <th style="width:80px;">状态</th>
-              <th style="width:60px;">跟进</th>
+              <th style="width:50px;">跟进</th>
               <th style="width:100px;">更新时间</th>
               <th style="width:100px;">操作</th>
             </tr>
@@ -1883,8 +1869,10 @@ function renderCustomerTable() {
         <td data-label="跟进"><span style="color:${(c.followRecords||[]).length>0?'var(--brand)':'var(--text-muted)'};white-space:nowrap;">${(c.followRecords||[]).length} 条</span></td>
         <td data-label="更新时间" style="color:var(--text-muted);white-space:nowrap;">${c.updateTime||''}</td>
         <td class="td-actions">
+          <div class="td-actions">
             <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openCustomerEditModal('${custEsc(c.id)}')">编辑</button>
             <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteCustomerConfirm('${custEsc(c.id)}')">删除</button>
+          </div>
         </td>
       </tr>
     `).join('');
