@@ -627,9 +627,8 @@
         font-size: 11px; font-weight: 600; color: var(--text-muted);
         padding-top: 1px;
       }
-      .table-wrap td.td-actions { justify-content: flex-end; margin-top: 4px; flex-direction: row !important; flex-wrap: nowrap; }
+      .table-wrap td.td-actions { display:flex !important; flex-direction: row !important; flex-wrap: nowrap !important; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 4px; }
       .table-wrap td.td-actions::before { display: none; }
-      .table-wrap td.td-actions .td-actions { flex-direction: row !important; flex-wrap: nowrap; }
       /* 强制「跟进」列横排，防止数字和"条"分开竖排 */
       .table-wrap td[data-label="跟进"] { flex-direction: row !important; align-items: center !important; white-space: nowrap; }
       .table-wrap td[data-label="跟进"] span { white-space: nowrap; }
@@ -1868,11 +1867,9 @@ function renderCustomerTable() {
         <td data-label="状态"><span class="badge ${CUST_BADGE_CLASS[c.status]||''}">${CUST_STATUS[c.status]||c.status}</span></td>
         <td data-label="跟进"><span style="color:${(c.followRecords||[]).length>0?'var(--brand)':'var(--text-muted)'};white-space:nowrap;">${(c.followRecords||[]).length} 条</span></td>
         <td data-label="更新时间" style="color:var(--text-muted);white-space:nowrap;">${c.updateTime||''}</td>
-        <td class="td-actions">
-          <div class="td-actions">
+        <td class="td-actions" style="white-space:nowrap;flex-wrap:nowrap;flex-direction:row;">
             <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openCustomerEditModal('${custEsc(c.id)}')">编辑</button>
             <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteCustomerConfirm('${custEsc(c.id)}')">删除</button>
-          </div>
         </td>
       </tr>
     `).join('');
