@@ -466,6 +466,9 @@
     .table-wrap table { width:100%; border-collapse:collapse; table-layout:fixed; }
     .table-wrap th { background:#f8fafc; padding:10px 12px; text-align:left; font-size:12px; font-weight:600; color:var(--text-muted); border-bottom:1px solid var(--border); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .table-wrap td { padding:10px 12px; border-bottom:1px solid var(--border); font-size:13px; vertical-align:middle; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .td-name { overflow:visible; text-overflow:unset; }
+    .td-phone { overflow:visible; text-overflow:unset; white-space:normal; }
+    .td-actions { overflow:visible; padding:8px 12px; }
     .table-wrap tbody tr { transition:background .1s; cursor:pointer; }
     .table-wrap tbody tr:hover { background:#f8fafc; }
     .td-name { font-weight:600; color:var(--text-primary); }
@@ -948,14 +951,14 @@
         <table>
           <thead>
             <tr>
-              <th style="width:100px;">客户</th>
-              <th style="width:120px;">联系方式</th>
-              <th style="min-width:150px;">单位 / 职称</th>
-              <th style="min-width:160px;">关联会议</th>
-              <th style="width:80px;">状态</th>
-              <th style="width:50px;">跟进</th>
-              <th style="width:100px;">更新时间</th>
-              <th style="width:100px;">操作</th>
+              <th style="width:11%;">客户</th>
+              <th style="width:11%;">联系方式</th>
+              <th style="width:17%;">单位 / 职称</th>
+              <th style="width:17%;">关联会议</th>
+              <th style="width:8%;">状态</th>
+              <th style="width:7%;">跟进</th>
+              <th style="width:11%;">更新时间</th>
+              <th style="width:150px;min-width:150px;">操作</th>
             </tr>
           </thead>
           <tbody id="customer-table-body"></tbody>
