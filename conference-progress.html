@@ -3453,9 +3453,10 @@ function onNoteChange(input) {
   setProgress(sec, item, field, input.value);
 }
 function deleteLink(sec, item, field) {
+  event.stopPropagation();
   if (!currentConf) return;
   setProgress(sec, item, field, '');
-  renderProgress(currentConf);
+  openDetail(currentConf.id);
 }
 function onSubDateChange(input) {
   const { sec, item, sub } = input.dataset;
