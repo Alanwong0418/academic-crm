@@ -310,6 +310,10 @@
     .tag-na { background:#f1f5f9; color:#94a3b8; }
     .link-input { padding:5px 9px; border:1.5px solid var(--border); border-radius:6px; font-size:12px; color:var(--text-primary); background:#fff; width:200px; transition:border-color .15s; }
     .link-input:focus { border-color:var(--brand); }
+    .note-link-pair { display:inline-flex; align-items:center; gap:4px; flex-shrink:0; }
+    .note-link-pair .note-text { width:80px; }
+    .note-link-pair .note-url { width:90px; }
+    .note-link-pair .link-btn { font-size:14px; padding:4px 6px; border-radius:6px; background:#f1f5f9; text-decoration:none; flex-shrink:0; }
     .sub-items { margin-left:28px; margin-top:6px; display:flex; flex-direction:column; gap:5px; }
     .sub-item { display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; background:#f8fafc; border:1px solid var(--border); }
     .sub-check { width:16px; height:16px; border-radius:4px; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer; transition:all .15s; font-size:10px; }
@@ -3328,18 +3332,18 @@ function openDetail(id) {
       // 内容描述 - hasNoteText+hasLink 双输入框，hasNoteText 单文本框，其余 hasNote 链接
       let noteHtml = '';
       if (item.hasNote) {
-        // 同时有文字描述和链接 → 双行输入
+        // 同时有文字描述和链接 → 紧凑双输入（仅保留描述和链接）
         if (item.hasNoteText && item.hasLink) {
           noteHtml = `
-            <div style="display:flex;gap:6px;align-items:center;">
-              <input class="link-input" type="text" value="${note || ''}" placeholder="描述" data-sec="${sec.key}" data-item="${item.key}" data-field="note" onblur="onNoteChange(this)" style="width:100px;">
-              ${link ? `<a href="${link}" target="_blank" class="link-input" style="color:var(--brand);text-decoration:underline;width:auto;padding:5px 8px;">🔗</a>` : `<input class="link-input" type="url" value="${link}" placeholder="链接" data-sec="${sec.key}" data-item="${item.key}" data-field="link" onblur="onLinkChange(this)" style="width:120px;">`}
-            </div>`;
+            <span class="note-link-pair">
+              <input class="link-input note-text" type="text" value="${note || ''}" placeholder="描述" data-sec="${sec.key}" data-item="${item.key}" data-field="note" onblur="onNoteChange(this)">
+              ${link ? `<a href="${link}" target="_blank" class="link-btn">🔗</a>` : `<input class="link-input note-url" type="url" value="" placeholder="链接" data-sec="${sec.key}" data-item="${item.key}" data-field="link" onblur="onLinkChange(this)">`}
+            </span>`;
         } else if (item.hasNoteText) {
-          noteHtml = `<input class="link-input" type="text" value="${note || ''}" placeholder="文字描述" data-sec="${sec.key}" data-item="${item.key}" data-field="note" onblur="onNoteChange(this)" style="width:160px;">`;
+          noteHtml = `<input class="link-input" type="text" value="${note || ''}" placeholder="文字描述" data-sec="${sec.key}" data-item="${item.key}" data-field="note" onblur="onNoteChange(this)" style="width:140px;">`;
         } else {
           noteHtml = note
-            ? `<a href="${note}" target="_blank" class="link-input" style="color:var(--brand);text-decoration:underline;width:auto;padding:5px 8px;" data-sec="${sec.key}" data-item="${item.key}" data-field="note">🔗 查看链接</a>`
+            ? `<a href="${note}" target="_blank" class="link-input" style="color:var(--brand);text-decoration:underline;width:auto;padding:5px 8px;">🔗 查看链接</a>`
             : `<input class="link-input" type="url" value="${note}" placeholder="粘贴链接" data-sec="${sec.key}" data-item="${item.key}" data-field="note" onblur="onNoteChange(this)">`;
         }
       }
