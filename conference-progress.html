@@ -3322,9 +3322,9 @@ function openDetail(id) {
         imgHtml = `<input class="link-input" type="url" value="${link || ''}" placeholder="粘贴图片URL" data-sec="${sec.key}" data-item="${item.key}" data-field="link" onblur="onLinkChange(this)" style="width:180px;margin-right:6px;">`;
       }
 
-      // 链接（推文）
+      // 链接（推文）- 注意：hasNoteText+hasLink 的链接已在 noteHtml 双输入中处理
       let linkHtml = '';
-      if (item.hasLink) {
+      if (item.hasLink && !(item.hasNoteText && item.hasNote)) {
         linkHtml = link
           ? `<a href="${link}" target="_blank" class="link-input" style="color:var(--brand);text-decoration:underline;width:auto;padding:5px 8px;" data-sec="${sec.key}" data-item="${item.key}" data-field="link">🔗 查看链接</a>`
           : `<input class="link-input" type="url" value="${link}" placeholder="粘贴链接" data-sec="${sec.key}" data-item="${item.key}" data-field="link" onblur="onLinkChange(this)">`;
