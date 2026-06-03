@@ -2899,7 +2899,7 @@ const TASK_SECTIONS = [
     items: [
       { key: 'huiban', label: '会伴上线', hasNote: true },
       { key: 'xiaohongshu', label: '小红书', hasNote: true },
-      { key: 'sales_circle', label: '销售群/朋友圈首发', hasNote: true },
+      { key: 'sales_circle', label: '销售群/朋友圈首发', hasNote: true, hasNoteText: true },
       { key: 'poster_date', label: '海报日期', hasImage: true },
       { key: 'wechat_article', label: '公众号推文（自）', hasNote: true },
       { key: 'wechat_sticker', label: '公众号贴图（自）', hasNote: true },
@@ -3325,10 +3325,16 @@ function openDetail(id) {
           ? `<a href="${link}" target="_blank" class="link-input" style="color:var(--brand);text-decoration:underline;width:auto;padding:5px 8px;" data-sec="${sec.key}" data-item="${item.key}" data-field="link">🔗 查看链接</a>`
           : `<input class="link-input" type="url" value="${link}" placeholder="粘贴链接" data-sec="${sec.key}" data-item="${item.key}" data-field="link" onblur="onLinkChange(this)">`;
       }
-      // 内容描述（销售群等）- 文字描述输入框
+      // 内容描述 - hasNoteText 用文字描述，其余 hasNote 用粘贴链接
       let noteHtml = '';
       if (item.hasNote) {
-        noteHtml = `<input class="link-input" type="text" value="${note || ''}" placeholder="文字描述" data-sec="${sec.key}" data-item="${item.key}" data-field="note" onblur="onNoteChange(this)" style="width:160px;">`;
+        if (item.hasNoteText) {
+          noteHtml = `<input class="link-input" type="text" value="${note || ''}" placeholder="文字描述" data-sec="${sec.key}" data-item="${item.key}" data-field="note" onblur="onNoteChange(this)" style="width:160px;">`;
+        } else {
+          noteHtml = note
+            ? `<a href="${note}" target="_blank" class="link-input" style="color:var(--brand);text-decoration:underline;width:auto;padding:5px 8px;" data-sec="${sec.key}" data-item="${item.key}" data-field="note">🔗 查看链接</a>`
+            : `<input class="link-input" type="url" value="${note}" placeholder="粘贴链接" data-sec="${sec.key}" data-item="${item.key}" data-field="note" onblur="onNoteChange(this)">`;
+        }
       }
 
       el.innerHTML = `
