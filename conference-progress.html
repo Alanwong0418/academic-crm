@@ -2800,9 +2800,33 @@ function buildInfoField(c, key, label, type) {
     <input class="${cls}" type="${type}" value="${val}" placeholder="未设置" data-conf-key="${key}" onchange="onConfFieldChange(this)">
   </div>`;
 }
+// 防抖定时器，避免输入时频繁请求
+let _confFieldTimer = null;
 function onConfFieldChange(el) {
   if (!currentConf) return;
-  currentConf[el.dataset.confKey] = el.value;
+  const key = el.dataset.confKey;
+  currentConf[key] = el.value;
+  // 自动保存到数据库（防抖600ms）
+  clearTimeout(_confFieldTimer);
+  _confFieldTimer = setTimeout(async () => {
+    try {
+      const patch = { [key]: el.value || null };
+      await sbFetch(`/rest/v1/conferences?id=eq.${currentConf.id}`, {
+        method: 'PATCH',
+        headers: { 'Prefer': 'return=minimal' },
+        body: JSON.stringify(patch)
+      });
+      // 更新本地数组缓存
+      const idx = conferences.findIndex(c => c.id === currentConf.id);
+      if (idx !== -1) conferences[idx][key] = el.value || null;
+      // 轻提示（绿色边框闪烁，不打扰用户）
+      el.style.border = '1.5px solid #22c55e';
+      setTimeout(() => { el.style.border = ''; }, 1000);
+    } catch(e) {
+      console.error('[自动保存失败]', key, e);
+      showToast('自动保存失败：' + e.message, 'error');
+    }
+  }, 600);
 }
 
 // ═══════════════════════════════════════════════
