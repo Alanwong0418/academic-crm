@@ -2891,7 +2891,7 @@ const TASK_SECTIONS = [
   {
     key: 'prev_promo', label: '往届作者宣传', icon: '👥',
     items: [
-      { key: 'prev1', label: '往届宣传发布', getNote: c => c.progress?.prev_promo?.prev1?.note, hasNote: true },
+      { key: 'prev1', label: '往届宣传发布', getNote: c => c.progress?.prev_promo?.prev1?.note, hasNote: true, hasNoteText: true, hasLink: true },
     ]
   },
   {
@@ -3325,10 +3325,17 @@ function openDetail(id) {
           ? `<a href="${link}" target="_blank" class="link-input" style="color:var(--brand);text-decoration:underline;width:auto;padding:5px 8px;" data-sec="${sec.key}" data-item="${item.key}" data-field="link">🔗 查看链接</a>`
           : `<input class="link-input" type="url" value="${link}" placeholder="粘贴链接" data-sec="${sec.key}" data-item="${item.key}" data-field="link" onblur="onLinkChange(this)">`;
       }
-      // 内容描述 - hasNoteText 用文字描述，其余 hasNote 用粘贴链接
+      // 内容描述 - hasNoteText+hasLink 双输入框，hasNoteText 单文本框，其余 hasNote 链接
       let noteHtml = '';
       if (item.hasNote) {
-        if (item.hasNoteText) {
+        // 同时有文字描述和链接 → 双行输入
+        if (item.hasNoteText && item.hasLink) {
+          noteHtml = `
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input class="link-input" type="text" value="${note || ''}" placeholder="描述" data-sec="${sec.key}" data-item="${item.key}" data-field="note" onblur="onNoteChange(this)" style="width:100px;">
+              ${link ? `<a href="${link}" target="_blank" class="link-input" style="color:var(--brand);text-decoration:underline;width:auto;padding:5px 8px;">🔗</a>` : `<input class="link-input" type="url" value="${link}" placeholder="链接" data-sec="${sec.key}" data-item="${item.key}" data-field="link" onblur="onLinkChange(this)" style="width:120px;">`}
+            </div>`;
+        } else if (item.hasNoteText) {
           noteHtml = `<input class="link-input" type="text" value="${note || ''}" placeholder="文字描述" data-sec="${sec.key}" data-item="${item.key}" data-field="note" onblur="onNoteChange(this)" style="width:160px;">`;
         } else {
           noteHtml = note
