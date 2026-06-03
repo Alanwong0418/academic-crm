@@ -2797,36 +2797,46 @@ function buildInfoField(c, key, label, type) {
   }
   return `<div class="info-field">
     <div class="info-label">${label}</div>
-    <input class="${cls}" type="${type}" value="${val}" placeholder="未设置" data-conf-key="${key}" onchange="onConfFieldChange(this)">
+    <input class="${cls}" type="${type}" value="${val}" placeholder="未设置" data-conf-key="${key}" onchange="onConfFieldChange(this)" oninput="onConfFieldChange(this)">
   </div>`;
 }
 // 防抖定时器，避免输入时频繁请求
 let _confFieldTimer = null;
-function onConfFieldChange(el) {
+async function onConfFieldChange(el) {
   if (!currentConf) return;
   const key = el.dataset.confKey;
-  currentConf[key] = el.value;
-  // 自动保存到数据库（防抖600ms）
+  const rawVal = el.value;
+  currentConf[key] = rawVal;
+  // date 类型立即保存（不防抖），text/number 防抖500ms
+  const delay = (el.type === 'date') ? 0 : 500;
   clearTimeout(_confFieldTimer);
-  _confFieldTimer = setTimeout(async () => {
+  const doSave = async () => {
+    // 空字符串转 null，避免 DATE/TIMESTAMPTZ 类型报错
+    const dbVal = (rawVal === '' || rawVal == null) ? null : rawVal;
+    const patch = { [key]: dbVal };
+    console.log('[自动保存]', key, '=', dbVal, 'type=', el.type);
     try {
-      const patch = { [key]: el.value || null };
       await sbFetch(`/rest/v1/conferences?id=eq.${currentConf.id}`, {
         method: 'PATCH',
-        headers: { 'Prefer': 'return=minimal' },
+        headers: { 'Prefer': 'return=minimal', 'Content-Type': 'application/json' },
         body: JSON.stringify(patch)
       });
       // 更新本地数组缓存
       const idx = conferences.findIndex(c => c.id === currentConf.id);
-      if (idx !== -1) conferences[idx][key] = el.value || null;
-      // 轻提示（绿色边框闪烁，不打扰用户）
+      if (idx !== -1) conferences[idx][key] = dbVal;
+      // 绿色边框提示保存成功
       el.style.border = '1.5px solid #22c55e';
-      setTimeout(() => { el.style.border = ''; }, 1000);
+      el.style.transition = 'border-color .3s';
+      setTimeout(() => { el.style.border = ''; }, 1200);
     } catch(e) {
-      console.error('[自动保存失败]', key, e);
-      showToast('自动保存失败：' + e.message, 'error');
+      console.error('[自动保存失败]', key, '=', dbVal, e);
+      showToast('保存失败（' + key + '）：' + e.message, 'error');
+      el.style.border = '1.5px solid #ef4444';
+      setTimeout(() => { el.style.border = ''; }, 2000);
     }
-  }, 600);
+  };
+  if (delay === 0) { await doSave(); }
+  else { _confFieldTimer = setTimeout(doSave, delay); }
 }
 
 // ═══════════════════════════════════════════════
