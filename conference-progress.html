@@ -228,6 +228,7 @@
     .progress-bar { height:6px; background:var(--bg); border-radius:3px; overflow:hidden; }
     .progress-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,var(--brand),#60a5fa); transition:width .4s ease; }
     .card-tasks { padding:0 18px 14px; display:flex; flex-direction:column; gap:5px; }
+    .card-section-title { font-size:11px; font-weight:600; color:var(--text-muted); letter-spacing:.5px; margin-bottom:4px; margin-top:2px; }
     .task-row { display:flex; align-items:center; gap:7px; }
     .task-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
     .dot-done { background:var(--success); }
@@ -3018,13 +3019,15 @@ function buildCard(c) {
   const badgeMap = { active: ['badge-active','进行中'], upcoming: ['badge-upcoming','待启动'], done: ['badge-done','已完成'], urgent: ['badge-urgent','有逾期'] };
   const [badgeCls, badgeTxt] = badgeMap[status] || ['badge-upcoming','待启动'];
   
-  // 卡片只显示这4个截稿任务（有日期的才显示）
+  // 卡片显示所有截稿时间（有日期的才显示）
   const p = c.progress || {};
   const deadlineItems = [
-    { key: 'r1', label: '一轮截稿', getDate: c => c.deadline_r1 },
-    { key: 'r2', label: '二轮截稿', getDate: c => c.deadline_r2 },
-    { key: 'final', label: '最终截稿', getDate: c => c.final_deadline },
-    { key: 'early_bird', label: '早鸟截止', getDate: c => c.early_bird_date },
+    { key: 'r1',        label: '一轮截稿', getDate: c => c.deadline_r1 },
+    { key: 'r2',        label: '二轮截稿', getDate: c => c.deadline_r2 },
+    { key: 'r3',        label: '三轮截稿', getDate: c => c.deadline_r3 },
+    { key: 'r4',        label: '四轮截稿', getDate: c => c.deadline_r4 },
+    { key: 'final',     label: '最终截稿', getDate: c => c.final_deadline },
+    { key: 'early_bird',label: '早鸟截止', getDate: c => c.early_bird_date },
   ];
   const cardTasks = deadlineItems
     .map(item => {
@@ -3044,6 +3047,25 @@ function buildCard(c) {
       <div class="task-date">${t.date ? fmtDate(t.date) : ''}</div>
     </div>`;
   }).join('');
+
+  // 上线时间行（有日期才显示）
+  const onlineItems = [
+    { label: '一轮上线', val: c.online_r1 },
+    { label: '二轮上线', val: c.online_r2 },
+    { label: '三轮上线', val: c.online_r3 },
+  ];
+  const onlineRows = onlineItems
+    .filter(x => x.val)
+    .map(x => {
+      const diff = diffDays(x.val);
+      const s = diff !== null && diff <= 0 ? 'done' : diff !== null && diff <= 7 ? 'soon' : 'pending';
+      const dotMap = { done: 'dot-done', soon: 'dot-soon', pending: 'dot-pending' };
+      return `<div class="task-row">
+        <div class="task-dot ${dotMap[s]}"></div>
+        <div class="task-name">${x.label}</div>
+        <div class="task-date">${fmtDate(x.val)}</div>
+      </div>`;
+    }).join('');
 
   const div = document.createElement('div');
   div.className = 'conf-card';
@@ -3065,7 +3087,14 @@ function buildCard(c) {
       </div>
       <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
     </div>
-    ${taskRows ? `<div class="card-tasks">${taskRows}</div>` : ''}
+    ${taskRows ? `<div class="card-tasks">
+      <div class="card-section-title">📅 截稿时间</div>
+      ${taskRows}
+    </div>` : ''}
+    ${onlineRows ? `<div class="card-tasks" style="margin-top:0;border-top:1px solid var(--border);padding-top:10px;">
+      <div class="card-section-title">🌐 上线时间</div>
+      ${onlineRows}
+    </div>` : ''}
     <div class="card-foot">
       <button class="card-action primary" onclick="openDetail('${c.id}')">查看详情 →</button>
       <button class="card-action ghost" onclick="deleteConf('${c.id}')">删除</button>
